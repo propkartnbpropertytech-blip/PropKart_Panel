@@ -70,42 +70,42 @@ export const Dashboard: React.FC<DashboardProps> = ({
       value: stats.total,
       sub: 'All-time registrations',
       icon: Users,
-      color: 'text-brand-400 bg-brand-500/10 border-brand-500/20',
+      color: 'text-brand-600 bg-brand-50 border-brand-200',
     },
     {
       title: "Today's Inflow",
       value: stats.today,
       sub: 'Received since 12:00 AM',
       icon: Clock,
-      color: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      color: 'text-amber-600 bg-amber-50 border-amber-200',
     },
     {
       title: 'Pending Contact',
       value: stats.pending_contact,
       sub: 'Awaiting telecaller call',
       icon: PhoneCall,
-      color: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+      color: 'text-blue-600 bg-blue-50 border-blue-200',
     },
     {
       title: 'Contacted / Verified',
       value: stats.contacted,
       sub: 'Initial call completed',
       icon: MessageSquare,
-      color: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+      color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
     },
     {
       title: 'Converted to Inventory',
       value: stats.converted,
       sub: 'Active in PropKart inventory',
       icon: CheckCircle2,
-      color: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
     },
     {
       title: 'Media Assets',
       value: `${stats.photos} / ${stats.videos}`,
       sub: 'Photos / Videos collected',
       icon: ImageIcon,
-      color: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+      color: 'text-purple-600 bg-purple-50 border-purple-200',
     },
   ];
 
@@ -118,19 +118,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
           return (
             <div
               key={idx}
-              className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-sm space-y-3"
+              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400 tracking-tight">{kpi.title}</span>
+                <span className="text-xs font-semibold text-slate-500 tracking-tight">{kpi.title}</span>
                 <div className={`p-2 rounded-xl border ${kpi.color}`}>
                   <Icon className="w-4 h-4" />
                 </div>
               </div>
               <div>
-                <div className="text-2xl font-bold font-display text-white tracking-tight">
+                <div className="text-2xl font-bold font-display text-slate-900 tracking-tight">
                   {kpi.value}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">{kpi.sub}</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">{kpi.sub}</div>
               </div>
             </div>
           );
@@ -138,15 +138,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Recent Submissions Table */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold font-display text-white">Recent Property Submissions</h2>
-            <p className="text-xs text-slate-400">Incoming registrations via PropKart Connect</p>
+            <h2 className="text-sm font-bold font-display text-slate-900">Recent Property Submissions</h2>
+            <p className="text-xs text-slate-500">Incoming registrations via PropKart Connect</p>
           </div>
           <button
             onClick={onNavigateSubmissions}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-700 bg-slate-800/60 hover:bg-slate-800 text-xs font-semibold text-slate-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors"
           >
             <span>View All Submissions</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
@@ -155,14 +155,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         {recentSubmissions.length === 0 ? (
           <div className="p-12 text-center text-slate-500 text-xs space-y-1">
-            <Building className="w-8 h-8 text-slate-600 mx-auto" />
-            <div>No submissions recorded yet</div>
+            <Building className="w-8 h-8 text-slate-400 mx-auto" />
+            <div className="font-semibold text-slate-600">No submissions recorded yet</div>
             <div className="text-[11px] text-slate-400">Fill the form in PropKart Connect to test the flow!</div>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-950/60 text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+            <table className="w-full text-left text-xs text-slate-700">
+              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Registration ID</th>
                   <th className="py-3 px-4">Owner Name</th>
@@ -173,35 +173,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100">
                 {recentSubmissions.map((sub) => (
                   <tr
                     key={sub.id}
                     onClick={() => onSelectSubmission(sub.id)}
-                    className="hover:bg-slate-800/40 cursor-pointer transition-colors"
+                    className="hover:bg-slate-50 cursor-pointer transition-colors"
                   >
-                    <td className="py-3 px-4 font-mono font-semibold text-brand-400">
+                    <td className="py-3 px-4 font-mono font-semibold text-brand-600">
                       {sub.registration_code}
                     </td>
-                    <td className="py-3 px-4 font-medium text-white">
+                    <td className="py-3 px-4 font-medium text-slate-900">
                       {sub.owner_name || 'N/A'}
                     </td>
-                    <td className="py-3 px-4 font-mono text-slate-400">
+                    <td className="py-3 px-4 font-mono text-slate-600">
                       {sub.owner_phone || 'N/A'}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">
+                    <td className="py-3 px-4 text-slate-600">
                       {sub.property_type || 'Residential'}
                     </td>
-                    <td className="py-3 px-4 text-slate-300">
+                    <td className="py-3 px-4 text-slate-600">
                       {sub.city || 'Gujarat'}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                         {sub.status}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className="text-brand-400 hover:text-brand-300 font-semibold text-xs">
+                      <span className="text-brand-600 hover:text-brand-700 font-semibold text-xs">
                         Open Desk →
                       </span>
                     </td>

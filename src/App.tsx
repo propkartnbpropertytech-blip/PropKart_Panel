@@ -18,8 +18,8 @@ const PanelContent: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center space-y-3 text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center space-y-3 text-slate-600">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
         <span className="text-xs font-semibold">Connecting to PropKart Panel Desk...</span>
       </div>
     );
@@ -64,7 +64,7 @@ const PanelContent: React.FC = () => {
   const { title, subtitle } = getHeaderInfo();
 
   return (
-    <div className="min-h-screen flex bg-slate-950 text-slate-100">
+    <div className="min-h-screen flex bg-slate-50 text-slate-900">
       <Sidebar currentTab={currentTab} onSelectTab={handleTabChange} />
 
       <div className="flex-1 flex flex-col min-w-0">

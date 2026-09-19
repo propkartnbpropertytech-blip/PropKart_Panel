@@ -54,10 +54,10 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
 
   if (media.length === 0) {
     return (
-      <div className="p-8 rounded-2xl bg-slate-900 border border-slate-800 text-center space-y-2">
-        <ImageIcon className="w-8 h-8 text-slate-600 mx-auto" />
-        <div className="text-xs font-semibold text-slate-400">No media attached</div>
-        <div className="text-[11px] text-slate-500">The owner did not submit any photos or videos.</div>
+      <div className="p-8 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2">
+        <ImageIcon className="w-8 h-8 text-slate-400 mx-auto" />
+        <div className="text-xs font-semibold text-slate-600">No media attached</div>
+        <div className="text-[11px] text-slate-400">The owner did not submit any photos or videos.</div>
       </div>
     );
   }
@@ -68,11 +68,11 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
       {photos.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-              <ImageIcon className="w-4 h-4 text-brand-400" />
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <ImageIcon className="w-4 h-4 text-brand-600" />
               <span>Property Photos ({photos.length})</span>
             </div>
-            <span className="text-[11px] text-slate-400">Click any photo to open full-screen viewer</span>
+            <span className="text-[11px] text-slate-500">Click any photo to open full-screen viewer</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -83,7 +83,7 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
                   setLightboxIndex(idx);
                   setZoomLevel(1);
                 }}
-                className="group relative aspect-square rounded-xl overflow-hidden bg-slate-950 border border-slate-800 hover:border-brand-500 transition-all cursor-pointer shadow-sm"
+                className="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 hover:border-brand-500 transition-all cursor-pointer shadow-sm"
               >
                 <img
                   src={item.public_url}
@@ -91,8 +91,8 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <span className="p-1.5 rounded-full bg-slate-900/80 text-white text-xs font-semibold">
+                <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="p-1.5 rounded-full bg-white/90 text-slate-800 text-xs font-semibold shadow">
                     <ZoomIn className="w-4 h-4" />
                   </span>
                 </div>
@@ -109,11 +109,11 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
       {videos.length > 0 && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-bold text-white uppercase tracking-wider">
-              <VideoIcon className="w-4 h-4 text-emerald-400" />
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-900 uppercase tracking-wider">
+              <VideoIcon className="w-4 h-4 text-emerald-600" />
               <span>Property Videos & Walkthroughs ({videos.length})</span>
             </div>
-            <span className="text-[11px] text-slate-400">Click to play video with controls</span>
+            <span className="text-[11px] text-slate-500">Click to play video with controls</span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -121,10 +121,10 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
               <div
                 key={vid.id || idx}
                 onClick={() => setActiveVideo(vid)}
-                className="group relative aspect-video rounded-2xl overflow-hidden bg-slate-950 border border-slate-800 hover:border-emerald-500 cursor-pointer transition-all shadow-sm flex flex-col justify-between p-4"
+                className="group relative aspect-video rounded-2xl overflow-hidden bg-slate-50 border border-slate-200 hover:border-emerald-500 cursor-pointer transition-all shadow-sm flex flex-col justify-between p-4"
               >
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span className="font-semibold text-white">Video Walkthrough #{idx + 1}</span>
+                <div className="flex items-center justify-between text-xs text-slate-500">
+                  <span className="font-semibold text-slate-900">Video Walkthrough #{idx + 1}</span>
                   {vid.file_size && (
                     <span className="text-[10px] font-mono">
                       {(vid.file_size / (1024 * 1024)).toFixed(1)} MB
@@ -132,11 +132,11 @@ export const MediaGalleryViewer: React.FC<MediaGalleryViewerProps> = ({ media })
                   )}
                 </div>
 
-                <div className="self-center w-12 h-12 rounded-full bg-emerald-600/90 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                <div className="self-center w-12 h-12 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Play className="w-5 h-5 fill-white ml-0.5" />
                 </div>
 
-                <div className="text-[11px] text-slate-400 truncate">
+                <div className="text-[11px] text-slate-500 truncate">
                   {vid.original_name || `Walkthrough video ${idx + 1}`}
                 </div>
               </div>
