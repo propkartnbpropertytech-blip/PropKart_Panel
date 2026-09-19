@@ -170,6 +170,13 @@ export async function fetchActiveFormSchema(): Promise<any> {
   return request('/forms/active');
 }
 
+export async function saveActiveFormFieldsDirect(fields: any[]): Promise<any> {
+  return request('/admin/forms/fields', {
+    method: 'PUT',
+    body: JSON.stringify({ fields }),
+  });
+}
+
 export async function fetchVersionSchema(versionId: string): Promise<{
   version: FormVersion;
   sections: FormSection[];

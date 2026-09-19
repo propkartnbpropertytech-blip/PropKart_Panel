@@ -717,6 +717,87 @@ export async function saveDraftVersionSchema(versionId, sectionsWithFields, user
 }
 
 /**
+ * Direct Simple Form Fields Update (No complex versioning/software bloat)
+ */
+export async function saveActiveFormFields(fields = [], userId) {
+    const { data: form, error: formErr } = await supabase
+        .from("forms")
+        .select("id, slug, current_version_id")
+        .eq("slug", "property-registration")
+        .single();
+
+    if (formErr || !form) throw new Error("Active form not found.");
+
+    const versionId = form.current_version_id;
+
+    // Ensure at least one section exists
+    let { data: section } = await supabase
+        .from("form_sections")
+        .select("id")
+        .eq("version_id", versionId)
+        .order("display_order", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+    if (!section) {
+        const { data: newSec, error: secErr } = await supabase
+            .from("form_sections")
+            .insert({
+                version_id: versionId,
+                title: "Property Registration",
+                display_order: 1,
+            })
+            .select()
+            .single();
+        if (secErr) throw secErr;
+        section = newSec;
+    }
+
+    // Delete existing fields for this version
+    await supabase.from("form_fields").delete().eq("version_id", versionId);
+
+    // Insert updated fields
+    if (fields.length > 0) {
+        const usedKeys = new Set();
+        const fieldInserts = fields.map((f, idx) => {
+            let key = (f.field_key || f.label || `field_${idx + 1}`)
+                .toLowerCase()
+                .replace(/[^a-z0-9_]/g, "_")
+                .replace(/^_+|_+$/g, "")
+                .slice(0, 50);
+            if (!key) key = `field_${idx + 1}`;
+            while (usedKeys.has(key)) {
+                key = `${key}_${idx + 1}`;
+            }
+            usedKeys.add(key);
+
+            return {
+                version_id: versionId,
+                section_id: section.id,
+                field_key: key,
+                label: f.label || `Field ${idx + 1}`,
+                field_type: f.field_type || "text",
+                placeholder: f.placeholder || null,
+                help_text: f.help_text || null,
+                is_required: !!f.is_required,
+                is_active: f.is_active !== false,
+                display_order: idx + 1,
+                validation_rules: f.validation_rules || {},
+                options: Array.isArray(f.options) ? f.options : [],
+            };
+        });
+
+        const { error: insertErr } = await supabase
+            .from("form_fields")
+            .insert(fieldInserts);
+
+        if (insertErr) throw insertErr;
+    }
+
+    return getActiveFormBySlug("property-registration");
+}
+
+/**
  * Publish a draft version
  */
 export async function publishFormVersion(versionId, userId) {

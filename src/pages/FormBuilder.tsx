@@ -1,81 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { FormSection, FormField, FormVersion } from '../types/panel';
-import {
-  fetchActiveFormSchema,
-  fetchVersionSchema,
-  saveVersionSchema,
-  publishFormVersion,
-  createNewDraftVersion,
-} from '../services/api';
-import { FieldEditorModal } from '../components/FieldEditorModal';
-import { LiveFormPreview } from '../components/LiveFormPreview';
+import { fetchActiveFormSchema, saveActiveFormFieldsDirect } from '../services/api';
 import {
   Plus,
   Save,
-  Rocket,
-  Eye,
   Trash2,
-  Edit2,
-  Copy,
   ArrowUp,
   ArrowDown,
   CheckCircle2,
   AlertCircle,
   Loader2,
-  FolderPlus,
-  Sliders,
-  Check,
+  FileText,
+  RotateCcw,
 } from 'lucide-react';
 
+export interface SimpleField {
+  id?: string;
+  field_key?: string;
+  label: string;
+  field_type: string;
+  is_required: boolean;
+  options?: { label: string; value: string }[] | string;
+}
+
+const FIELD_TYPES = [
+  { value: 'text', label: 'Text Field' },
+  { value: 'number', label: 'Number Field' },
+  { value: 'phone', label: 'Phone Number' },
+  { value: 'email', label: 'Email Address' },
+  { value: 'textarea', label: 'Address / Long Text' },
+  { value: 'photos', label: 'Photos (Limit 50)' },
+  { value: 'videos', label: 'Videos (Limit 30)' },
+  { value: 'google_location', label: 'Google Maps Location' },
+  { value: 'direction', label: 'Direction & Landmarks' },
+  { value: 'dropdown', label: 'Dropdown Options' },
+  { value: 'consent', label: 'Yes/No Checkbox' },
+];
+
+const DEFAULT_FIELDS: SimpleField[] = [
+  { label: 'Owner Name', field_type: 'text', is_required: true },
+  { label: 'Mobile Number', field_type: 'phone', is_required: true },
+  { label: 'Email Address', field_type: 'email', is_required: false },
+  {
+    label: 'Property Type',
+    field_type: 'dropdown',
+    is_required: true,
+    options: [
+      { label: 'Residential Apartment', value: 'Residential Apartment' },
+      { label: 'Villa / Bungalow', value: 'Villa / Bungalow' },
+      { label: 'Commercial Office', value: 'Commercial Office' },
+      { label: 'Plot / Land', value: 'Plot / Land' },
+    ],
+  },
+  {
+    label: 'Listing Type',
+    field_type: 'dropdown',
+    is_required: true,
+    options: [
+      { label: 'Rent', value: 'Rent' },
+      { label: 'Re-sale', value: 'Re-sale' },
+    ],
+  },
+  {
+    label: 'Configuration (BHK)',
+    field_type: 'dropdown',
+    is_required: true,
+    options: [
+      { label: '1 BHK', value: '1 BHK' },
+      { label: '2 BHK', value: '2 BHK' },
+      { label: '3 BHK', value: '3 BHK' },
+      { label: '4+ BHK', value: '4+ BHK' },
+    ],
+  },
+  { label: 'Expected Price (₹)', field_type: 'number', is_required: true },
+  { label: 'Built-up Area (Sq. Ft)', field_type: 'number', is_required: true },
+  { label: 'City', field_type: 'text', is_required: true },
+  { label: 'Locality / Area', field_type: 'text', is_required: true },
+  { label: 'Address / Society Name', field_type: 'textarea', is_required: true },
+  { label: 'Google Maps Location URL', field_type: 'google_location', is_required: true },
+  { label: 'Direction & Landmarks', field_type: 'direction', is_required: true },
+  { label: 'Property Photos (Limit 50)', field_type: 'photos', is_required: true },
+  { label: 'Property Videos (Limit 30)', field_type: 'videos', is_required: false },
+  { label: 'Owner Declaration & Consent', field_type: 'consent', is_required: true },
+];
+
 export const FormBuilder: React.FC = () => {
-  const [formId, setFormId] = useState<string>('');
-  const [formTitle, setFormTitle] = useState<string>('Instant Property Registration');
-  const [version, setVersion] = useState<FormVersion | null>(null);
-  const [sections, setSections] = useState<FormSection[]>([]);
+  const [fields, setFields] = useState<SimpleField[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [publishing, setPublishing] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // Field Editor Modal state
-  const [editingField, setEditingField] = useState<{
-    sectionIdx: number;
-    fieldIdx?: number;
-    field: FormField | null;
-  } | null>(null);
-
-  // Preview Modal state
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-
-  // New Section Title state
-  const [newSectionTitle, setNewSectionTitle] = useState('');
-  const [isAddingSection, setIsAddingSection] = useState(false);
-
-  // Load Form and current version schema
+  // Load active form fields
   useEffect(() => {
-    async function loadActiveSchema() {
+    async function loadFields() {
       setLoading(true);
       try {
         const activeData = await fetchActiveFormSchema();
-        setFormId(activeData.id);
-        setFormTitle(activeData.title);
-        setVersion({
-          id: activeData.version.id,
-          form_id: activeData.id,
-          version_number: activeData.version.version_number,
-          status: 'published',
-          published_at: activeData.version.published_at,
-          created_at: new Date().toISOString(),
+        const extracted: SimpleField[] = [];
+        (activeData.sections || []).forEach((sec: any) => {
+          (sec.fields || []).forEach((f: any) => {
+            extracted.push({
+              id: f.id,
+              field_key: f.field_key,
+              label: f.label || '',
+              field_type: f.field_type || 'text',
+              is_required: !!f.is_required,
+              options: f.options || [],
+            });
+          });
         });
-        setSections(activeData.sections || []);
+
+        if (extracted.length > 0) {
+          setFields(extracted);
+        } else {
+          setFields(DEFAULT_FIELDS);
+        }
       } catch (err: any) {
-        console.error('Failed to load schema:', err);
-        setFeedback({ type: 'error', message: err.message || 'Failed to load form schema.' });
+        console.error('Failed to load fields:', err);
+        setFields(DEFAULT_FIELDS);
       } finally {
         setLoading(false);
       }
     }
-    loadActiveSchema();
+    loadFields();
   }, []);
 
   const showFeedback = (type: 'success' | 'error', message: string) => {
@@ -83,447 +129,320 @@ export const FormBuilder: React.FC = () => {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  // Section Handlers
-  const handleAddSection = () => {
-    if (!newSectionTitle.trim()) return;
-    const newSec: FormSection = {
-      title: newSectionTitle.trim(),
-      description: '',
-      display_order: sections.length + 1,
-      fields: [],
+  // Add new field
+  const handleAddField = () => {
+    const newFld: SimpleField = {
+      label: '',
+      field_type: 'text',
+      is_required: false,
+      options: [],
     };
-    setSections([...sections, newSec]);
-    setNewSectionTitle('');
-    setIsAddingSection(false);
-    showFeedback('success', `Section "${newSec.title}" added.`);
+    setFields([...fields, newFld]);
   };
 
-  const handleRemoveSection = (sectionIdx: number) => {
-    if (!confirm('Are you sure you want to delete this section and all its fields?')) return;
-    setSections(sections.filter((_, idx) => idx !== sectionIdx));
-    showFeedback('success', 'Section removed.');
+  // Update field property
+  const handleUpdateField = (index: number, key: keyof SimpleField, value: any) => {
+    setFields((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [key]: value };
+      return copy;
+    });
   };
 
-  const handleMoveSection = (sectionIdx: number, direction: 'up' | 'down') => {
-    const targetIdx = direction === 'up' ? sectionIdx - 1 : sectionIdx + 1;
-    if (targetIdx < 0 || targetIdx >= sections.length) return;
-    const updated = [...sections];
-    const temp = updated[sectionIdx];
-    updated[sectionIdx] = updated[targetIdx];
-    updated[targetIdx] = temp;
-    setSections(updated);
+  // Update dropdown options (from comma-separated string)
+  const handleUpdateOptions = (index: number, commaSeparated: string) => {
+    const opts = commaSeparated
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((s) => ({ label: s, value: s }));
+    handleUpdateField(index, 'options', opts);
   };
 
-  // Field Handlers
-  const handleSaveField = (savedField: FormField) => {
-    if (!editingField) return;
-    const { sectionIdx, fieldIdx } = editingField;
-    const updatedSections = [...sections];
-    const sec = updatedSections[sectionIdx];
+  // Move field up/down
+  const handleMove = (index: number, direction: 'up' | 'down') => {
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    if (targetIdx < 0 || targetIdx >= fields.length) return;
 
-    if (fieldIdx !== undefined) {
-      // Edit existing field
-      sec.fields[fieldIdx] = savedField;
-    } else {
-      // Add new field
-      savedField.display_order = sec.fields.length + 1;
-      sec.fields.push(savedField);
+    setFields((prev) => {
+      const copy = [...prev];
+      const temp = copy[index];
+      copy[index] = copy[targetIdx];
+      copy[targetIdx] = temp;
+      return copy;
+    });
+  };
+
+  // Remove field
+  const handleRemoveField = (index: number) => {
+    setFields((prev) => prev.filter((_, idx) => idx !== index));
+  };
+
+  // Reset to standard fields
+  const handleResetToDefault = () => {
+    if (window.confirm('Reset form fields to standard property registration fields?')) {
+      setFields(DEFAULT_FIELDS);
+      showFeedback('success', 'Reset to standard fields. Click "Save Changes" to apply.');
+    }
+  };
+
+  // Save fields directly
+  const handleSave = async () => {
+    // Validate that labels are entered
+    for (let i = 0; i < fields.length; i++) {
+      if (!fields[i].label.trim()) {
+        showFeedback('error', `Field #${i + 1} has an empty name. Please enter a name or delete it.`);
+        return;
+      }
     }
 
-    setSections(updatedSections);
-    setEditingField(null);
-    showFeedback('success', `Field "${savedField.label}" saved.`);
-  };
-
-  const handleRemoveField = (sectionIdx: number, fieldIdx: number) => {
-    const updated = [...sections];
-    updated[sectionIdx].fields = updated[sectionIdx].fields.filter((_, idx) => idx !== fieldIdx);
-    setSections(updated);
-    showFeedback('success', 'Field removed.');
-  };
-
-  const handleDuplicateField = (sectionIdx: number, fieldIdx: number) => {
-    const updated = [...sections];
-    const original = updated[sectionIdx].fields[fieldIdx];
-    const clone: FormField = {
-      ...JSON.parse(JSON.stringify(original)),
-      id: undefined,
-      label: `${original.label} (Copy)`,
-      field_key: `${original.field_key}_copy_${Math.floor(Math.random() * 1000)}`,
-      display_order: updated[sectionIdx].fields.length + 1,
-    };
-    updated[sectionIdx].fields.push(clone);
-    setSections(updated);
-    showFeedback('success', `Field "${clone.label}" duplicated.`);
-  };
-
-  const handleMoveField = (sectionIdx: number, fieldIdx: number, direction: 'up' | 'down') => {
-    const targetIdx = direction === 'up' ? fieldIdx - 1 : fieldIdx + 1;
-    const sec = sections[sectionIdx];
-    if (targetIdx < 0 || targetIdx >= sec.fields.length) return;
-    const updated = [...sections];
-    const temp = updated[sectionIdx].fields[fieldIdx];
-    updated[sectionIdx].fields[fieldIdx] = updated[sectionIdx].fields[targetIdx];
-    updated[sectionIdx].fields[targetIdx] = temp;
-    setSections(updated);
-  };
-
-  // Save Schema to Backend
-  const handleSaveDraft = async () => {
-    if (!version) return;
     setSaving(true);
     try {
-      // If current version is already published, prompt to create draft first
-      if (version.status === 'published') {
-        const draftVer = await createNewDraftVersion(
-          formId,
-          `Version ${version.version_number + 1} working draft`
-        );
-        setVersion(draftVer);
-        await saveVersionSchema(draftVer.id, sections);
-        showFeedback('success', `New Draft Version ${draftVer.version_number} created and saved.`);
-      } else {
-        await saveVersionSchema(version.id, sections);
-        showFeedback('success', 'Draft schema saved successfully.');
-      }
+      await saveActiveFormFieldsDirect(fields);
+      showFeedback('success', 'Form fields saved successfully! Connect form is updated.');
     } catch (err: any) {
       console.error('Save failed:', err);
-      showFeedback('error', err.message || 'Failed to save schema.');
+      showFeedback('error', err.message || 'Failed to save form fields.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Publish Form Version
-  const handlePublish = async () => {
-    if (!version) return;
-    if (!confirm(`Are you ready to publish Version ${version.version_number}? It will immediately become live on PropKart Connect.`)) {
-      return;
-    }
-
-    setPublishing(true);
-    try {
-      // Save changes first if in draft
-      if (version.status === 'draft') {
-        await saveVersionSchema(version.id, sections);
-      }
-      const published = await publishFormVersion(version.id);
-      setVersion(published);
-      showFeedback('success', `Version ${published.version_number} is now LIVE on PropKart Connect!`);
-    } catch (err: any) {
-      console.error('Publish error:', err);
-      showFeedback('error', err.message || 'Publish failed.');
-    } finally {
-      setPublishing(false);
-    }
-  };
-
-  // Create explicit new draft
-  const handleCreateDraft = async () => {
-    if (!formId) return;
-    setLoading(true);
-    try {
-      const draftVer = await createNewDraftVersion(formId, 'New version edit');
-      setVersion(draftVer);
-      showFeedback('success', `Created Draft Version ${draftVer.version_number}. You can now add/modify fields safely.`);
-    } catch (err: any) {
-      showFeedback('error', err.message || 'Failed to create new draft version.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (loading) {
     return (
-      <div className="p-12 flex flex-col items-center justify-center space-y-3 text-slate-400">
+      <div className="flex flex-col items-center justify-center py-24 text-slate-400 space-y-3">
         <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
-        <span className="text-xs font-semibold">Loading Form Builder Engine...</span>
+        <span className="text-xs font-semibold">Loading Form Configuration...</span>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Top Banner / Actions Header */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 max-w-5xl mx-auto pb-16">
+      {/* Header Actions */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg font-bold font-display text-white">{formTitle}</h2>
-            {version && (
-              <span
-                className={`px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                  version.status === 'published'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                }`}
-              >
-                Version {version.version_number} • {version.status}
-              </span>
-            )}
-          </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Build and organize sections, add custom fields, configure validation rules, and preview in real-time.
+          <h2 className="text-lg font-bold font-display text-white flex items-center gap-2">
+            <FileText className="w-5 h-5 text-brand-400" />
+            <span>Form Fields Configuration</span>
+          </h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Add or remove fields like photos, number, text, address, and maps. Connect form updates instantly.
           </p>
         </div>
 
-        {/* Builder Toolbar Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
           <button
-            onClick={() => setIsPreviewOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all shadow-xs"
+            type="button"
+            onClick={handleResetToDefault}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+            title="Reset to default fields"
           >
-            <Eye className="w-4 h-4 text-brand-400" />
-            <span>Live Preview</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Defaults</span>
           </button>
 
-          {version?.status === 'published' ? (
-            <button
-              onClick={handleCreateDraft}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold transition-all shadow-xs"
-            >
-              <Plus className="w-4 h-4 text-amber-400" />
-              <span>Create Draft Version</span>
-            </button>
-          ) : (
-            <button
-              onClick={handleSaveDraft}
-              disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 text-xs font-semibold transition-all shadow-xs disabled:opacity-50"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 text-brand-400" />}
-              <span>Save Draft</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleAddField}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm active:scale-95 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Field</span>
+          </button>
 
           <button
-            onClick={handlePublish}
-            disabled={publishing}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-950/30 transition-all disabled:opacity-50"
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md active:scale-95 transition-all disabled:opacity-50"
           >
-            {publishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Rocket className="w-4 h-4" />}
-            <span>Publish to Connect</span>
+            {saving ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>Save Changes</span>
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* Feedback Alert */}
+      {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border text-xs font-medium animate-in fade-in duration-200 ${
+          className={`flex items-center gap-3 p-4 rounded-xl text-xs font-semibold ${
             feedback.type === 'success'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-              : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'
+              : 'bg-rose-500/10 border border-rose-500/30 text-rose-400'
           }`}
         >
-          {feedback.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+          {feedback.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+          )}
           <span>{feedback.message}</span>
         </div>
       )}
 
-      {/* Sections and Fields Tree */}
-      <div className="space-y-6">
-        {sections.map((section, sIdx) => (
-          <div
-            key={section.id || sIdx}
-            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-sm space-y-5"
-          >
-            {/* Section Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-              <div className="flex items-center gap-3">
-                <span className="w-7 h-7 rounded-xl bg-brand-600/20 text-brand-400 border border-brand-500/30 flex items-center justify-center text-xs font-bold">
-                  {sIdx + 1}
-                </span>
-                <div>
-                  <h3 className="text-sm font-bold text-white tracking-tight">{section.title}</h3>
-                  {section.description && (
-                    <p className="text-[11px] text-slate-400">{section.description}</p>
-                  )}
-                </div>
-              </div>
+      {/* Fields List */}
+      <div className="space-y-3">
+        {fields.length === 0 ? (
+          <div className="text-center py-16 bg-slate-900/50 border border-dashed border-slate-800 rounded-2xl p-6">
+            <p className="text-xs text-slate-400 mb-3">No fields configured yet.</p>
+            <button
+              type="button"
+              onClick={handleAddField}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Your First Field</span>
+            </button>
+          </div>
+        ) : (
+          fields.map((field, idx) => {
+            const optionsString = Array.isArray(field.options)
+              ? field.options.map((o: any) => o.label || o.value || o).join(', ')
+              : '';
 
-              {/* Section Controls */}
-              <div className="flex items-center gap-1.5 self-end sm:self-auto">
-                <button
-                  onClick={() => handleMoveSection(sIdx, 'up')}
-                  disabled={sIdx === 0}
-                  className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30"
-                  title="Move Section Up"
-                >
-                  <ArrowUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => handleMoveSection(sIdx, 'down')}
-                  disabled={sIdx === sections.length - 1}
-                  className="p-1.5 rounded-lg bg-slate-800 text-slate-400 hover:text-white disabled:opacity-30"
-                  title="Move Section Down"
-                >
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setEditingField({ sectionIdx: sIdx, field: null })}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-600/20 text-brand-300 border border-brand-500/30 hover:bg-brand-600/30 text-xs font-semibold ml-2 transition-colors"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add Field</span>
-                </button>
-                <button
-                  onClick={() => handleRemoveSection(sIdx)}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors ml-1"
-                  title="Delete Section"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Fields List */}
-            {section.fields.length === 0 ? (
-              <div className="p-6 rounded-2xl border border-dashed border-slate-800 text-center text-xs text-slate-500 space-y-2">
-                <div>No fields in this section yet.</div>
-                <button
-                  onClick={() => setEditingField({ sectionIdx: sIdx, field: null })}
-                  className="text-brand-400 hover:underline font-semibold"
-                >
-                  + Add First Field
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {section.fields.map((f, fIdx) => (
-                  <div
-                    key={f.field_key || fIdx}
-                    className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-950 border border-slate-800/80 hover:border-slate-700 transition-all group"
-                  >
-                    <div className="min-w-0 flex-1 pr-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-white truncate">{f.label}</span>
-                        {f.is_required && (
-                          <span className="text-[10px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.2 rounded border border-rose-500/20">
-                            Required
-                          </span>
-                        )}
-                        {!f.is_active && (
-                          <span className="text-[10px] font-bold text-slate-500 bg-slate-800 px-1.5 py-0.2 rounded">
-                            Inactive
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                        <span className="font-mono text-slate-500">{f.field_key}</span>
-                        <span>•</span>
-                        <span className="capitalize text-brand-400 font-medium">{f.field_type}</span>
-                        {f.options && f.options.length > 0 && (
-                          <>
-                            <span>•</span>
-                            <span>{f.options.length} options</span>
-                          </>
-                        )}
-                      </div>
+            return (
+              <div
+                key={idx}
+                className="bg-slate-900 border border-slate-800 rounded-2xl p-4 transition-all hover:border-slate-700/80 shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  {/* Left: Index & Name */}
+                  <div className="flex items-center gap-3 w-full sm:w-1/2">
+                    <span className="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 font-mono text-xs font-semibold flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={field.label}
+                        onChange={(e) => handleUpdateField(idx, 'label', e.target.value)}
+                        placeholder="Field Name (e.g. Property Photos, Price)"
+                        className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder:text-slate-600 text-xs font-semibold focus:outline-none focus:border-brand-500"
+                      />
                     </div>
+                  </div>
 
-                    {/* Field Action Buttons */}
-                    <div className="flex items-center gap-1 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity">
+                  {/* Middle: Type Selector */}
+                  <div className="w-full sm:w-1/3">
+                    <select
+                      value={field.field_type}
+                      onChange={(e) => handleUpdateField(idx, 'field_type', e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-slate-200 text-xs font-medium focus:outline-none focus:border-brand-500"
+                    >
+                      {FIELD_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Right: Required Checkbox, Move Buttons, Delete */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={field.is_required}
+                        onChange={(e) => handleUpdateField(idx, 'is_required', e.target.checked)}
+                        className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-brand-600 focus:ring-0 cursor-pointer"
+                      />
+                      <span className="text-[11px] font-semibold text-slate-300">Required</span>
+                    </label>
+
+                    <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
                       <button
-                        onClick={() => handleMoveField(sIdx, fIdx, 'up')}
-                        disabled={fIdx === 0}
-                        className="p-1 text-slate-500 hover:text-white disabled:opacity-20"
+                        type="button"
+                        onClick={() => handleMove(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30"
                         title="Move Up"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                       </button>
+
                       <button
-                        onClick={() => handleMoveField(sIdx, fIdx, 'down')}
-                        disabled={fIdx === section.fields.length - 1}
-                        className="p-1 text-slate-500 hover:text-white disabled:opacity-20"
+                        type="button"
+                        onClick={() => handleMove(idx, 'down')}
+                        disabled={idx === fields.length - 1}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-30"
                         title="Move Down"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
+
                       <button
-                        onClick={() => handleDuplicateField(sIdx, fIdx)}
-                        className="p-1.5 text-slate-400 hover:text-brand-400 transition-colors"
-                        title="Duplicate Field"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setEditingField({ sectionIdx: sIdx, fieldIdx: fIdx, field: f })}
-                        className="p-1.5 text-slate-400 hover:text-white transition-colors"
-                        title="Edit Field"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleRemoveField(sIdx, fIdx)}
-                        className="p-1.5 text-slate-500 hover:text-rose-400 transition-colors"
+                        type="button"
+                        onClick={() => handleRemoveField(idx)}
+                        className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 ml-1"
                         title="Delete Field"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
+                </div>
 
-        {/* Add Section Button */}
-        {isAddingSection ? (
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 max-w-lg">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-white">New Form Section</h4>
-            <input
-              type="text"
-              value={newSectionTitle}
-              onChange={(e) => setNewSectionTitle(e.target.value)}
-              placeholder="e.g. Additional Owner Requirements"
-              autoFocus
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-brand-500"
-              onKeyDown={(e) => e.key === 'Enter' && handleAddSection()}
-            />
-            <div className="flex items-center gap-2 justify-end">
-              <button
-                onClick={() => setIsAddingSection(false)}
-                className="px-3.5 py-1.5 text-xs text-slate-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddSection}
-                className="px-4 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-xs"
-              >
-                Add Section
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={() => setIsAddingSection(true)}
-            className="w-full py-4 rounded-3xl border-2 border-dashed border-slate-800 hover:border-slate-700 bg-slate-900/40 text-slate-400 hover:text-white flex items-center justify-center gap-2 text-xs font-semibold transition-all"
-          >
-            <FolderPlus className="w-4 h-4 text-brand-400" />
-            <span>Create New Form Section</span>
-          </button>
+                {/* Optional: Dropdown options input if field_type === 'dropdown' */}
+                {field.field_type === 'dropdown' && (
+                  <div className="mt-3 pt-3 border-t border-slate-800/80">
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">
+                      Options (comma-separated):
+                    </label>
+                    <input
+                      type="text"
+                      defaultValue={optionsString}
+                      onBlur={(e) => handleUpdateOptions(idx, e.target.value)}
+                      placeholder="e.g. Rent, Re-sale"
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 placeholder:text-slate-600 text-xs focus:outline-none focus:border-brand-500"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
-      {/* Field Editor Modal */}
-      {editingField && (
-        <FieldEditorModal
-          field={editingField.field}
-          isOpen={true}
-          onClose={() => setEditingField(null)}
-          onSave={handleSaveField}
-        />
-      )}
+      {/* Bottom Save & Add Buttons */}
+      <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+        <button
+          type="button"
+          onClick={handleAddField}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Add Another Field</span>
+        </button>
 
-      {/* Live Preview Modal */}
-      <LiveFormPreview
-        sections={sections}
-        formTitle={formTitle}
-        isOpen={isPreviewOpen}
-        onClose={() => setIsPreviewOpen(false)}
-      />
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saving}
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md active:scale-95 transition-all disabled:opacity-50"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Saving Changes...</span>
+            </>
+          ) : (
+            <>
+              <Save className="w-4 h-4" />
+              <span>Save Form Fields</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };

@@ -325,6 +325,25 @@ export async function saveVersionSchema(req, res, next) {
 }
 
 /**
+ * PUT /api/v1/admin/forms/fields
+ * Simple direct form fields update
+ */
+export async function saveActiveFields(req, res, next) {
+    try {
+        const { fields } = req.body;
+        const updated = await repo.saveActiveFormFields(fields || [], req.user?.id);
+
+        return res.status(200).json({
+            success: true,
+            message: "Form fields updated successfully!",
+            data: updated,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
  * POST /api/v1/admin/forms/versions/:version_id/publish
  * Form Builder: publish draft version
  */

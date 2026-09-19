@@ -93,7 +93,14 @@ router.post(
     controller.convertToProperty
 );
 
-// Form Builder Endpoints
+// Simple Form Configuration Endpoint
+router.put(
+    "/admin/forms/fields",
+    authenticate,
+    requireRole("Super Admin", "Admin"),
+    controller.saveActiveFields
+);
+
 router.get(
     "/admin/forms/versions/:version_id/schema",
     authenticate,
