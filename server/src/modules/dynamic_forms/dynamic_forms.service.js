@@ -26,7 +26,7 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
         // 1. Required Check
         if (field.is_required) {
             if (field.field_type === "photos") {
-                const photosCount = media.filter((m) => m.field_key === field.field_key && m.media_type === "photo").length;
+                const photosCount = media.filter((m) => m.media_type === "photo" || m.field_key === field.field_key).length;
                 if (photosCount === 0) {
                     validationErrors[field.field_key] = `${field.label} is required (at least 1 photo).`;
                 }
@@ -47,8 +47,8 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
         // 2. Type-specific validations
         if (field.field_type === "phone") {
             const cleanPhone = String(val).replace(/\D/g, "");
-            if (!/^(91)?[6-9]\d{9}$/.test(cleanPhone)) {
-                validationErrors[field.field_key] = "Please enter a valid 10-digit Indian mobile number.";
+            if (cleanPhone.length < 10) {
+                validationErrors[field.field_key] = "Please enter a valid 10-digit mobile number.";
             }
         } else if (field.field_type === "email") {
             if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val).trim())) {

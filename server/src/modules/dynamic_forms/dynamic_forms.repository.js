@@ -159,15 +159,30 @@ export async function createSubmissionRecord({
     }
 
     // Extract standard indexed fields if present in fields payload
-    const ownerName = fields.owner_name || fields.full_name || fields.name || null;
-    const ownerPhone = fields.owner_phone || fields.mobile || fields.phone || null;
-    const ownerEmail = fields.owner_email || fields.email || null;
-    const propertyType = fields.property_type || null;
-    const listingType = fields.listing_type || null;
-    const city = fields.city || null;
-    const area = fields.area || null;
-    const address = fields.address || null;
-    const directionUrl = fields.direction || fields.direction_url || null;
+    let ownerName = fields.owner_name || fields.owner_full_name || fields.full_name || fields.name || null;
+    let ownerPhone = fields.owner_phone || fields.mobile_number || fields.mobile || fields.phone || fields.contact || null;
+    let ownerEmail = fields.owner_email || fields.email || null;
+    let propertyType = fields.property_type || null;
+    let listingType = fields.listing_type || null;
+    let city = fields.city || null;
+    let area = fields.area || fields.locality || fields.locality_area || null;
+    let address = fields.address || fields.property_address || fields.society_name || null;
+    let directionUrl = fields.direction || fields.direction_landmarks || fields.direction_url || null;
+
+    // Intelligent fallback by scanning keys
+    for (const [k, v] of Object.entries(fields)) {
+        if (!v || typeof v === "object") continue;
+        const lk = k.toLowerCase();
+        if (!ownerName && (lk.includes("name") || lk.includes("owner"))) ownerName = String(v);
+        if (!ownerPhone && (lk.includes("phone") || lk.includes("mobile") || lk.includes("contact"))) ownerPhone = String(v);
+        if (!ownerEmail && lk.includes("email")) ownerEmail = String(v);
+        if (!propertyType && lk.includes("property_type")) propertyType = String(v);
+        if (!listingType && lk.includes("listing")) listingType = String(v);
+        if (!city && lk.includes("city")) city = String(v);
+        if (!area && (lk.includes("area") || lk.includes("locality"))) area = String(v);
+        if (!address && (lk.includes("address") || lk.includes("society"))) address = String(v);
+        if (!directionUrl && (lk.includes("direction") || lk.includes("landmark"))) directionUrl = String(v);
+    }
 
     let locationUrl = null;
     let latitude = null;
@@ -755,6 +770,9 @@ export async function saveActiveFormFields(fields = [], userId) {
 
     // Delete existing fields for this version
     await supabase.from("form_fields").delete().eq("version_id", versionId);
+
+    // Clean up any other empty sections for this version so schema is clean
+    await supabase.from("form_sections").delete().eq("version_id", versionId).neq("id", section.id);
 
     // Insert updated fields
     if (fields.length > 0) {

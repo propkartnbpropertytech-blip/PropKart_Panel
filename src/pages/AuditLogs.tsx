@@ -36,12 +36,12 @@ export const AuditLogs: React.FC = () => {
   }, []);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold font-display text-slate-900">System Audit Trail</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Immutable log of form modifications, publishing events, submissions, and telecaller activities.
+            Immutable log of form modifications, publishing events, submissions, and property pool activities.
           </p>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-xs text-slate-700 border border-slate-200">

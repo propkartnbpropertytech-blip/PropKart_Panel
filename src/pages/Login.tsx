@@ -25,7 +25,7 @@ export const Login: React.FC = () => {
       <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-brand-500/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-96 h-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-8 shadow-xl relative z-10 space-y-6">
+      <div className="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-xl relative z-10 space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-brand-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-brand-600/30">
@@ -35,7 +35,7 @@ export const Login: React.FC = () => {
             PropKart <span className="text-brand-600 font-semibold">Panel</span>
           </h1>
           <p className="text-xs text-slate-500">
-            Internal Form Management & Telecaller Desk
+            Property Pool Management & Dynamic Forms
           </p>
         </div>
 
@@ -80,7 +80,7 @@ export const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/20 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+            className="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-600/20 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2 cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -95,7 +95,7 @@ export const Login: React.FC = () => {
 
         <div className="pt-2 border-t border-slate-100 flex items-center justify-center gap-2 text-[11px] text-slate-500">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-          <span>Role-Based Access: Super Admin, Admin, Telecaller</span>
+          <span>Authorized Pool Management Access</span>
         </div>
       </div>
     </div>

@@ -218,7 +218,7 @@ export const FormBuilder: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-16">
+    <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto pb-16">
       {/* Header Actions */}
       <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
         <div>
