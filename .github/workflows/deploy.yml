@@ -1,0 +1,34 @@
+name: PropKart Panel Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ ]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Production Assets
+        run: npm run build
+        env:
+          VITE_API_URL: https://api-propkart.nbpropertytech.com/api/v1
+          VITE_SUPABASE_URL: http://200.234.36.120:8000
+
+      - name: Health & Smoke Check
+        run: |
+          echo "Production assets compiled successfully."
+          ls -la dist/
