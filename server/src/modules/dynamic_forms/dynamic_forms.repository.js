@@ -76,14 +76,19 @@ export async function getActiveFormBySlug(slug = "property-registration") {
 export async function getFormVersionSchema(versionId) {
     const { data: version, error: verErr } = await supabase
         .from("form_versions")
-        .select(`
-            id, form_id, version_number, status, changelog, published_at, created_at,
-            forms (id, slug, title, description, is_active, current_version_id)
-        `)
+        .select("id, form_id, version_number, status, changelog, published_at, created_at")
         .eq("id", versionId)
         .single();
 
     if (verErr || !version) throw new Error("Version not found.");
+
+    const { data: form } = await supabase
+        .from("forms")
+        .select("id, slug, title, description, is_active, current_version_id")
+        .eq("id", version.form_id)
+        .single();
+
+    version.forms = form || null;
 
     const { data: sections, error: secErr } = await supabase
         .from("form_sections")
@@ -332,7 +337,7 @@ export async function getSubmissionDetailById(id) {
         .from("form_submissions")
         .select(`
             *,
-            assigned_user:users!form_submissions_assigned_to_fkey(id, full_name, email, phone)
+            assigned_user:users!form_submissions_assigned_to_fkey(id, full_name, email, mobile)
         `)
         .eq("id", id)
         .single();
@@ -376,6 +381,25 @@ export async function getSubmissionDetailById(id) {
         notes: notes || [],
         audit_logs: auditLogs || [],
     };
+}
+/**
+ * Get single submission by public registration code (for instant verification)
+ */
+export async function getSubmissionByRegistrationCode(code) {
+    if (!code) return null;
+    const { data, error } = await supabase
+        .from("form_submissions")
+        .select(`
+            id, registration_code, form_id, version_id, status,
+            owner_name, owner_phone, owner_email, property_type, listing_type,
+            city, area, address, location_url, direction_url,
+            created_at
+        `)
+        .eq("registration_code", code.trim())
+        .maybeSingle();
+
+    if (error) throw error;
+    return data;
 }
 
 /**

@@ -47,7 +47,6 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
         // 2. Type-specific validations
         if (field.field_type === "phone") {
             const cleanPhone = String(val).replace(/\D/g, "");
-            // Allow 10 digits Indian phone or with 91 prefix
             if (!/^(91)?[6-9]\d{9}$/.test(cleanPhone)) {
                 validationErrors[field.field_key] = "Please enter a valid 10-digit Indian mobile number.";
             }
@@ -77,12 +76,9 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
             }
         } else if (field.field_type === "google_location") {
             let locUrl = typeof val === "object" ? (val.url || val.location_url) : val;
-            if (rules.url_required && (!locUrl || !String(locUrl).includes("google.com/maps") && !String(locUrl).includes("goo.gl") && !String(locUrl).includes("maps.app.goo.gl"))) {
-                // If coordinates present, it's also acceptable
-                const hasCoords = typeof val === "object" && val.lat && val.lng;
-                if (!hasCoords && (!locUrl || !String(locUrl).startsWith("http"))) {
-                    validationErrors[field.field_key] = "Please provide a valid Google Maps link or pin your location.";
-                }
+            const hasCoords = typeof val === "object" && val.lat && val.lng;
+            if (rules.url_required && !hasCoords && (!locUrl || !String(locUrl).startsWith("http"))) {
+                validationErrors[field.field_key] = "Please provide a valid Google Maps link or pin your location.";
             }
         }
     }
@@ -108,18 +104,29 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
  * Handle new public submission
  */
 export async function submitRegistrationForm({ versionId, fields, media = [], ipAddress, userAgent }) {
-    // 1. Fetch form version to ensure it is published and active
+    // 1. Fetch form version to ensure it is published
     const { data: version, error: verErr } = await supabase
         .from("form_versions")
-        .select("id, form_id, status, forms (is_active)")
+        .select("id, form_id, status")
         .eq("id", versionId)
         .single();
 
-    if (verErr || !version || version.status !== "published" || !version.forms?.is_active) {
-        throw new Error("This form is no longer accepting submissions.");
+    if (verErr || !version || version.status !== "published") {
+        throw new Error("This form version is not currently accepting submissions.");
     }
 
-    // 2. Server-side validation
+    // 2. Fetch parent form to ensure active
+    const { data: form } = await supabase
+        .from("forms")
+        .select("is_active")
+        .eq("id", version.form_id)
+        .single();
+
+    if (!form || !form.is_active) {
+        throw new Error("This form is currently inactive.");
+    }
+
+    // 3. Server-side validation
     const { isValid, errors } = await validateSubmissionAgainstSchema(versionId, fields, media);
     if (!isValid) {
         const error = new Error("Validation failed for form submission.");
@@ -128,7 +135,7 @@ export async function submitRegistrationForm({ versionId, fields, media = [], ip
         throw error;
     }
 
-    // 3. Insert submission record
+    // 4. Insert submission record
     const submission = await repo.createSubmissionRecord({
         versionId,
         formId: version.form_id,

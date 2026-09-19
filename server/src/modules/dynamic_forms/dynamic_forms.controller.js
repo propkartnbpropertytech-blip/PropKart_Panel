@@ -103,9 +103,9 @@ export async function submitPropertyForm(req, res, next) {
 export async function verifyRegistrationCode(req, res, next) {
     try {
         const { code } = req.params;
-        const { data: sub, error } = await repo.getSubmissions({ search: code, limit: 1 });
+        const match = await repo.getSubmissionByRegistrationCode(code);
 
-        if (error || !sub || sub.length === 0) {
+        if (!match) {
             return res.status(404).json({
                 success: false,
                 message: "Registration not found.",
@@ -113,7 +113,6 @@ export async function verifyRegistrationCode(req, res, next) {
             });
         }
 
-        const match = sub[0];
         return res.status(200).json({
             success: true,
             data: {
