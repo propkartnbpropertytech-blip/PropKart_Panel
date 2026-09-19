@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import dynamicFormsRouter from "./modules/dynamic_forms/dynamic_forms.routes.js";
 import authRouter from "./modules/auth/auth.routes.js";
 
@@ -18,6 +19,10 @@ app.use(cors({
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Serve uploaded static files locally
+app.use("/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
+app.use("/forms-api/uploads", express.static(path.join(process.cwd(), "public", "uploads")));
 
 // Request logging
 app.use((req, res, next) => {

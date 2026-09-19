@@ -76,7 +76,7 @@ export async function uploadFileToStorage(file, folder = "submissions") {
         const localFilePath = path.join(localUploadsDir, filename);
         fs.writeFileSync(localFilePath, file.buffer);
 
-        const baseUrl = process.env.APP_URL || "http://200.234.36.120:5050";
+        const baseUrl = process.env.APP_URL || "http://localhost:5050";
         publicUrl = `${baseUrl}/uploads/${folder}/${filename}`;
     }
 

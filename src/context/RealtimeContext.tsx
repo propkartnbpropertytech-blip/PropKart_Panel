@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
 // Supabase VPS configuration
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'http://200.234.36.120:8000';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:8000';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg2Njk5NTkyLCJleHAiOjE5NDQzNzk1OTJ9.g4VezDunjdcYVOiPt_xgNUUzohQsIc5UsnqMJ26AdTA';
 
 interface RealtimeContextType {

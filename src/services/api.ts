@@ -7,7 +7,7 @@ import {
   FormVersion,
 } from '../types/panel';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api-propkart.nbpropertytech.com/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api/v1';
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('propkart_panel_token');
