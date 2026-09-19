@@ -4,8 +4,8 @@ import { Building2, Lock, Mail, Loader2, AlertCircle, ShieldCheck } from 'lucide
 
 export const Login: React.FC = () => {
   const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('telecaller@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('admin');
+  const [password, setPassword] = useState('Propkart@123');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,14 +48,14 @@ export const Login: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Email Address</label>
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Username / Email</label>
             <div className="relative">
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="telecaller@gmail.com"
+                placeholder="admin or admin@propkart.in"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white placeholder:text-slate-600 text-xs focus:outline-none focus:border-brand-500 transition-colors"
               />
               <Mail className="w-4 h-4 text-slate-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
