@@ -1,9 +1,8 @@
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { v4 as uuidv4 } from "uuid";
+import crypto from "crypto";
 import supabase from "../../config/supabase.js";
-import { env } from "../../config/env.js";
 
 // Allowed MIME types
 const ALLOWED_MIME_TYPES = new Set([
@@ -42,7 +41,7 @@ export const uploadMiddleware = multer({
 export async function uploadFileToStorage(file, folder = "submissions") {
     const isVideo = file.mimetype.startsWith("video/");
     const ext = path.extname(file.originalname).toLowerCase() || (isVideo ? ".mp4" : ".jpg");
-    const filename = `${uuidv4()}${ext}`;
+    const filename = `${crypto.randomUUID()}${ext}`;
     const storagePath = `${folder}/${isVideo ? "videos" : "photos"}/${filename}`;
 
     let publicUrl = "";
@@ -77,7 +76,7 @@ export async function uploadFileToStorage(file, folder = "submissions") {
         const localFilePath = path.join(localUploadsDir, filename);
         fs.writeFileSync(localFilePath, file.buffer);
 
-        const baseUrl = env.isProd ? "https://api-propkart.nbpropertytech.com" : `http://localhost:${env.port || 5001}`;
+        const baseUrl = process.env.APP_URL || "http://200.234.36.120:5050";
         publicUrl = `${baseUrl}/uploads/${folder}/${filename}`;
     }
 
