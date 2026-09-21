@@ -7,10 +7,9 @@ import {
   Clock,
   CheckCircle2,
   Image as ImageIcon,
-  ArrowUpRight,
+  ArrowRight,
   ShieldCheck,
   Building,
-  Sparkles,
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -64,149 +63,142 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const kpiCards = [
     {
-      title: 'Property Pool Total',
+      title: 'Total Pool',
       value: stats.total,
-      sub: 'All recorded properties',
       icon: Layers,
-      color: 'text-brand-600 bg-brand-50 border-brand-200',
     },
     {
       title: "Today's Inflow",
       value: stats.today,
-      sub: 'Received since midnight',
       icon: Clock,
-      color: 'text-amber-600 bg-amber-50 border-amber-200',
     },
     {
       title: 'Under Review',
       value: stats.pending_contact,
-      sub: 'Pending initial check',
       icon: ShieldCheck,
-      color: 'text-blue-600 bg-blue-50 border-blue-200',
     },
     {
-      title: 'Verified Listings',
+      title: 'Verified',
       value: stats.contacted,
-      sub: 'Details confirmed',
       icon: CheckCircle2,
-      color: 'text-emerald-600 bg-emerald-50 border-emerald-200',
     },
     {
-      title: 'Active in Pool',
+      title: 'Converted',
       value: stats.converted,
-      sub: 'Live & available',
-      icon: Sparkles,
-      color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+      icon: Building,
     },
     {
-      title: 'Media Assets',
-      value: `${stats.photos} / ${stats.videos}`,
-      sub: 'Photos & Videos',
+      title: 'Photos',
+      value: stats.photos,
       icon: ImageIcon,
-      color: 'text-purple-600 bg-purple-50 border-purple-200',
     },
   ];
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      {/* Apple Health style KPI Metric Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
             <div
               key={idx}
-              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3 hover:border-slate-300 transition-colors"
+              className="bg-white rounded-2xl border border-black/[0.06] p-4 sm:p-5 shadow-apple-sm flex flex-col justify-between transition-all hover:shadow-apple"
             >
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 tracking-tight">{kpi.title}</span>
-                <div className={`p-2 rounded-xl border ${kpi.color}`}>
-                  <Icon className="w-4 h-4" />
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  {kpi.title}
+                </span>
+                <div className="w-7 h-7 rounded-lg bg-black/[0.03] flex items-center justify-center text-slate-600">
+                  <Icon className="w-3.5 h-3.5" />
                 </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold font-display text-slate-900 tracking-tight">
-                  {kpi.value}
-                </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">{kpi.sub}</div>
+              <div className="mt-3">
+                <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 font-sans">
+                  {loading ? '—' : kpi.value.toLocaleString()}
+                </span>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Recent Submissions Table */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Recent Submissions Section */}
+      <div className="bg-white rounded-3xl border border-black/[0.06] shadow-apple-sm overflow-hidden">
+        <div className="p-4 sm:p-6 border-b border-black/[0.06] flex items-center justify-between">
           <div>
-            <h2 className="text-sm font-bold font-display text-slate-900">Recent Property Pool Inflow</h2>
-            <p className="text-xs text-slate-500">Live property submissions from PropKart Connect</p>
+            <h2 className="text-base font-semibold text-slate-900 tracking-tight">Recent Submissions</h2>
           </div>
           <button
             onClick={onNavigateSubmissions}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-xs font-semibold text-slate-700 transition-colors cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-700 bg-black/[0.04] hover:bg-black/[0.08] active:scale-[0.97] transition-all cursor-pointer"
           >
-            <span>Explore Entire Pool</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
+            <span>View All</span>
+            <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {recentSubmissions.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 text-xs space-y-1">
-            <Building className="w-8 h-8 text-slate-400 mx-auto" />
-            <div className="font-semibold text-slate-600">No properties in pool yet</div>
-            <div className="text-[11px] text-slate-400">Fill the form in PropKart Connect to test the flow!</div>
+          <div className="py-16 text-center text-slate-400 space-y-2">
+            <Layers className="w-8 h-8 mx-auto text-slate-300" />
+            <p className="text-sm font-medium text-slate-600">No submissions recorded yet</p>
+            <p className="text-xs text-slate-400">New submissions from PropKart Connect will appear here</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-700 min-w-[600px]">
-              <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-b border-slate-200">
-                <tr>
-                  <th className="py-3 px-4">Reference ID</th>
-                  <th className="py-3 px-4">Owner Name</th>
-                  <th className="py-3 px-4">Mobile</th>
-                  <th className="py-3 px-4">Property Type</th>
-                  <th className="py-3 px-4">City</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {recentSubmissions.map((sub) => (
-                  <tr
-                    key={sub.id}
-                    onClick={() => onSelectSubmission(sub.id)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-4 font-mono font-semibold text-brand-600 whitespace-nowrap">
-                      {sub.registration_code}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-900 truncate max-w-[140px]">
-                      {sub.owner_name || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 font-mono text-slate-600 whitespace-nowrap">
-                      {sub.owner_phone || 'N/A'}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 whitespace-nowrap">
-                      {sub.property_type || 'Residential'}
-                    </td>
-                    <td className="py-3 px-4 text-slate-600 truncate max-w-[120px]">
-                      {sub.city || 'Gujarat'}
-                    </td>
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
-                        {sub.status}
+          <div className="divide-y divide-black/[0.04]">
+            {recentSubmissions.map((sub) => {
+              const isRent = sub.listing_type?.toLowerCase().includes('rent');
+              const isSale = sub.listing_type?.toLowerCase().includes('sale') || sub.listing_type?.toLowerCase().includes('resale');
+
+              return (
+                <div
+                  key={sub.id}
+                  onClick={() => onSelectSubmission(sub.id)}
+                  className="p-4 sm:px-6 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-4 cursor-pointer"
+                >
+                  <div className="min-w-0 flex items-center gap-3 sm:gap-4">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-700 font-mono text-xs font-semibold shrink-0">
+                      {sub.property_type?.[0] || 'P'}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-xs sm:text-sm text-slate-900 truncate">
+                          {sub.owner_name || 'Anonymous Owner'}
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-400 hidden sm:inline">
+                          {sub.registration_code}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 truncate">
+                        {sub.property_type || 'Property'} • {sub.city || 'Gujarat'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                    {sub.listing_type && (
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                          isRent
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                            : isSale
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {sub.listing_type}
                       </span>
-                    </td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <span className="text-brand-600 hover:text-brand-700 font-semibold text-xs">
-                        Open Dossier →
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                    <span className="text-[11px] font-medium text-slate-400 hidden sm:inline">
+                      {new Date(sub.created_at).toLocaleDateString('en-IN', {
+                        day: 'numeric',
+                        month: 'short',
+                      })}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

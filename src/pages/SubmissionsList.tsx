@@ -500,27 +500,27 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
       )}
 
       {/* Top Filter & Pipeline Tabs Bar */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-4 sm:p-5 shadow-sm space-y-4">
+      <div className="bg-white border border-black/[0.06] rounded-3xl p-4 sm:p-5 shadow-apple-sm space-y-3.5">
         {/* Dynamic Dropdown Separation Tabs (Rent, Re-sale, or custom form builder dropdowns) */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-black/[0.06]">
+          <div className="bg-black/[0.04] p-1 rounded-full inline-flex items-center gap-1 overflow-x-auto max-w-full scrollbar-none">
             {/* All Properties Tab */}
             <button
               type="button"
               onClick={() => setActiveTabOption('All')}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${
                 activeTabOption === 'All'
-                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
-                  : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                  ? 'bg-white text-slate-900 shadow-apple-sm'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
               <span>All Properties</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
                   activeTabOption === 'All'
-                    ? 'bg-white/25 text-white'
-                    : 'bg-white text-slate-600 border border-slate-200'
+                    ? 'bg-slate-100 text-slate-800'
+                    : 'bg-black/[0.05] text-slate-500'
                 }`}
               >
                 {tabCounts['All'] ?? pagination.total}
@@ -541,41 +541,27 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                   key={opt.value}
                   type="button"
                   onClick={() => setActiveTabOption(opt.value)}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer whitespace-nowrap active:scale-[0.98] ${
                     isActive
-                      ? isRent
-                        ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                        : isSale
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                        : 'bg-brand-600 text-white shadow-md shadow-brand-500/20'
-                      : isRent
-                      ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200/80'
-                      : isSale
-                      ? 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200/80'
-                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                      ? 'bg-white text-slate-900 shadow-apple-sm'
+                      : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
                   <span
-                    className={`w-2 h-2 rounded-full ${
-                      isActive
-                        ? 'bg-white'
-                        : isRent
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      isRent
                         ? 'bg-emerald-500'
                         : isSale
                         ? 'bg-indigo-500'
-                        : 'bg-brand-500'
+                        : 'bg-slate-600'
                     }`}
                   />
                   <span>{opt.label}</span>
                   <span
-                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
                       isActive
-                        ? 'bg-white/25 text-white'
-                        : isRent
-                        ? 'bg-white text-emerald-700 border border-emerald-200'
-                        : isSale
-                        ? 'bg-white text-indigo-700 border border-indigo-200'
-                        : 'bg-white text-slate-600 border border-slate-200'
+                        ? 'bg-slate-100 text-slate-800'
+                        : 'bg-black/[0.05] text-slate-500'
                     }`}
                   >
                     {count}
@@ -596,7 +582,7 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                   setActiveTabFieldKey(e.target.value);
                   setActiveTabOption('All');
                 }}
-                className="px-2.5 py-1 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold focus:bg-white focus:outline-none focus:border-brand-500 cursor-pointer"
+                className="px-3 py-1 rounded-full bg-slate-50 border border-black/[0.08] text-slate-700 text-xs font-medium focus:bg-white focus:outline-none cursor-pointer"
               >
                 {dropdownConfigs.map((cfg) => (
                   <option key={cfg.field_key} value={cfg.field_key}>
@@ -609,17 +595,17 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
         </div>
 
         {/* Status Pipeline Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
           {STATUS_TABS.map((tab) => {
             const isActive = selectedStatus === tab;
             return (
               <button
                 key={tab}
                 onClick={() => setSelectedStatus(tab)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all cursor-pointer active:scale-[0.97] ${
                   isActive
-                    ? 'bg-brand-600 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    ? 'bg-[#1d1d1f] text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-black/[0.04]'
                 }`}
               >
                 {tab}
@@ -629,22 +615,22 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
         </div>
 
         {/* Search & Selectors Row */}
-        <div className="flex flex-col md:flex-row gap-3 pt-1">
+        <div className="flex flex-col md:flex-row gap-2.5 pt-1">
           {/* Search Input */}
           <form onSubmit={handleSearchSubmit} className="flex-1 relative">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by owner name, phone, reference code, city, address..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
+              placeholder="Search by owner name, phone, reference code, city..."
+              className="w-full pl-9 pr-4 py-2 text-xs rounded-full bg-slate-50/70 border border-black/[0.08] text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black/[0.04] transition-all"
             />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </form>
 
           {/* Controls Group */}
-          <div className="flex flex-wrap sm:flex-nowrap gap-2.5 items-center">
-            {/* Dynamic Dropdown Filters from Form Builder (for fields not driving the main tabs) */}
+          <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center">
+            {/* Dynamic Dropdown Filters */}
             {dropdownConfigs
               .filter((cfg) => cfg.field_key !== activeTabFieldKey)
               .map((cfg) => (
@@ -657,7 +643,7 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                       [cfg.field_key]: e.target.value,
                     }))
                   }
-                  className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs focus:bg-white focus:outline-none focus:border-brand-500"
+                  className="flex-1 sm:flex-none px-3 py-2 rounded-full bg-slate-50/70 border border-black/[0.08] text-slate-700 text-xs font-medium focus:bg-white focus:outline-none"
                 >
                   <option value="">All {cfg.label}</option>
                   {cfg.options.map((opt) => (
@@ -672,21 +658,21 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
             <select
               value={propertyTypeFilter}
               onChange={(e) => setPropertyTypeFilter(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs focus:bg-white focus:outline-none focus:border-brand-500"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-full bg-slate-50/70 border border-black/[0.08] text-slate-700 text-xs font-medium focus:bg-white focus:outline-none"
             >
-              <option value="">All Property Types</option>
-              <option value="Apartment">Apartment / Flat</option>
-              <option value="Villa">Villa / House</option>
-              <option value="Commercial Office">Commercial Office</option>
-              <option value="Retail Shop">Retail Shop</option>
-              <option value="Plot / Land">Plot / Land</option>
+              <option value="">All Types</option>
+              <option value="Apartment">Apartment</option>
+              <option value="Villa">Villa</option>
+              <option value="Commercial Office">Commercial</option>
+              <option value="Retail Shop">Shop</option>
+              <option value="Plot / Land">Plot</option>
             </select>
 
             {/* City Filter */}
             <select
               value={cityFilter}
               onChange={(e) => setCityFilter(e.target.value)}
-              className="flex-1 sm:flex-none px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs focus:bg-white focus:outline-none focus:border-brand-500"
+              className="flex-1 sm:flex-none px-3 py-2 rounded-full bg-slate-50/70 border border-black/[0.08] text-slate-700 text-xs font-medium focus:bg-white focus:outline-none"
             >
               <option value="">All Cities</option>
               <option value="Ahmedabad">Ahmedabad</option>
@@ -700,11 +686,11 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
             <button
               type="button"
               onClick={() => setSortDir((d) => (d === 'desc' ? 'asc' : 'desc'))}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold transition-colors cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-slate-50/70 border border-black/[0.08] text-slate-700 hover:bg-slate-100 text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95"
               title="Toggle sort order"
             >
-              <ArrowUpDown className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{sortDir === 'desc' ? 'Newest First' : 'Oldest First'}</span>
+              <ArrowUpDown className="w-3 h-3" />
+              <span className="hidden sm:inline">{sortDir === 'desc' ? 'Newest' : 'Oldest'}</span>
             </button>
 
             {/* Standard Export Dropdown */}
@@ -712,16 +698,16 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
               <button
                 type="button"
                 onClick={() => setIsExportMenuOpen((prev) => !prev)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 text-xs font-semibold transition-colors cursor-pointer shrink-0"
-                title="Export submissions with or without photos"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold transition-all cursor-pointer shrink-0 active:scale-95 shadow-xs"
+                title="Export submissions"
               >
                 {isExportingCsv || isExportingZip ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Download className="w-3.5 h-3.5 text-brand-600" />
+                  <Download className="w-3.5 h-3.5" />
                 )}
                 <span>Export</span>
-                <ChevronDown className="w-3 h-3 ml-0.5 opacity-70" />
+                <ChevronDown className="w-3 h-3 opacity-70" />
               </button>
 
               {isExportMenuOpen && (
@@ -952,7 +938,8 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
             <div className="text-slate-400">Try adjusting your search terms or filters.</div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+            <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700 min-w-[760px]">
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-b border-slate-200">
                 <tr>
@@ -1079,13 +1066,13 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                         <div className="inline-flex items-center gap-2 text-[10px] text-slate-500">
                           {photosCount > 0 && (
                             <span className="inline-flex items-center gap-0.5">
-                              <ImageIcon className="w-3 h-3 text-brand-600" />
+                              <ImageIcon className="w-3.5 h-3.5 text-brand-600" />
                               <span className="font-semibold">{photosCount}</span>
                             </span>
                           )}
                           {videosCount > 0 && (
                             <span className="inline-flex items-center gap-0.5">
-                              <VideoIcon className="w-3 h-3 text-emerald-600" />
+                              <VideoIcon className="w-3.5 h-3.5 text-emerald-600" />
                               <span className="font-semibold">{videosCount}</span>
                             </span>
                           )}
@@ -1198,7 +1185,155 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
               </tbody>
             </table>
           </div>
-        )}
+
+          {/* Mobile Apple Cards View (Visible on screens < 768px) */}
+          <div className="md:hidden divide-y divide-black/[0.06]">
+            {/* Mobile Select All Bar */}
+            <div className="p-3 bg-slate-50/70 border-b border-black/[0.06] flex items-center justify-between text-xs">
+              <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={isAllCurrentPageSelected}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded text-slate-900 border-slate-300"
+                />
+                <span>Select All ({submissions.length})</span>
+              </label>
+              {selectedIds.length > 0 && (
+                <span className="font-semibold text-emerald-600 font-mono text-[11px]">
+                  {selectedIds.length} Selected
+                </span>
+              )}
+            </div>
+
+            {submissions.map((sub) => {
+              const isSelected = selectedIds.includes(sub.id);
+              const photosCount = (sub.media || []).filter((m) => m.media_type === 'photo').length;
+              const videosCount = (sub.media || []).filter((m) => m.media_type === 'video').length;
+              const displayListingType =
+                sub.listing_type ||
+                sub.raw_data?.property_for_rent_or_sale ||
+                sub.raw_data?.listing_type ||
+                '';
+              const isRent = displayListingType.toLowerCase().includes('rent');
+              const isSale =
+                displayListingType.toLowerCase().includes('sale') ||
+                displayListingType.toLowerCase().includes('resale');
+
+              return (
+                <div
+                  key={sub.id}
+                  onClick={() => onSelectSubmission(sub.id)}
+                  className={`p-4 space-y-3 transition-colors cursor-pointer active:bg-slate-50 ${
+                    isSelected ? 'bg-emerald-50/50' : 'bg-white hover:bg-slate-50/60'
+                  }`}
+                >
+                  {/* Top Bar: Checkbox + Code + Badges */}
+                  <div className="flex items-center justify-between gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        onClick={(e) => toggleSelectOne(sub.id, e)}
+                        className="w-4 h-4 rounded text-slate-900 border-slate-300"
+                      />
+                      <span className="font-mono font-bold text-xs text-slate-900">
+                        {sub.registration_code}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {displayListingType && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            isRent
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                              : isSale
+                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200/60'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {displayListingType}
+                        </span>
+                      )}
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadge(sub.status)}`}>
+                        {sub.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Property & Owner Details */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <div className="text-[10px] uppercase font-semibold text-slate-400">Owner</div>
+                      <div className="font-semibold text-slate-900 truncate">{sub.owner_name || 'N/A'}</div>
+                      <div className="text-slate-500 font-mono text-[11px]">{sub.owner_phone || 'N/A'}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase font-semibold text-slate-400">Property</div>
+                      <div className="font-semibold text-slate-900 truncate">{sub.property_type || 'Property'}</div>
+                      <div className="text-slate-500 truncate">{sub.city || 'Gujarat'}</div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Bar: Media Indicators & Quick Actions */}
+                  <div className="flex items-center justify-between pt-2 border-t border-black/[0.04] text-xs">
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      {photosCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{photosCount}</span>
+                        </span>
+                      )}
+                      {videosCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <VideoIcon className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{videosCount}</span>
+                        </span>
+                      )}
+                      <span>
+                        {new Date(sub.created_at).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {sub.owner_phone && (
+                        <button
+                          onClick={() => setWhatsAppTarget(sub)}
+                          className="p-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border border-emerald-200/60"
+                          title="WhatsApp"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                      {sub.owner_phone && (
+                        <a
+                          href={`tel:${sub.owner_phone}`}
+                          className="p-1.5 rounded-full bg-black/[0.04] hover:bg-black/[0.08] text-slate-700 border border-black/[0.06]"
+                          title="Call"
+                        >
+                          <Phone className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                      <button
+                        onClick={() => onSelectSubmission(sub.id)}
+                        className="p-1.5 rounded-full bg-[#1d1d1f] hover:bg-black text-white"
+                        title="View Details"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
         {/* Pagination Bar */}
         <div className="px-4 sm:px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 bg-slate-50">

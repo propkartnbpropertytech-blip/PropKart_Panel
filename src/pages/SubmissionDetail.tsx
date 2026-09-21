@@ -238,34 +238,34 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
   const raw = submission.raw_data || {};
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto font-sans">
       {/* Toast notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-medium shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-full bg-[#1d1d1f] text-white text-xs font-medium shadow-apple-lg flex items-center gap-2 animate-in fade-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
       {/* Top Header Card */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white/80 backdrop-blur-xl border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm">
         <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0">
           <button
             onClick={onBack}
-            className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 transition-colors shrink-0"
+            className="w-10 h-10 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] flex items-center justify-center transition-all active:scale-[0.98] shrink-0 cursor-pointer"
             title="Back to property pool"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
           </button>
 
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-              <span className="text-lg sm:text-xl font-bold font-mono text-brand-600">
+              <span className="text-xl font-bold font-mono tracking-tight text-[#1d1d1f]">
                 {submission.registration_code}
               </span>
               <button
                 onClick={() => handleCopy(submission.registration_code, 'Reference ID')}
-                className="p-1 text-slate-400 hover:text-slate-700"
+                className="p-1 text-[#86868b] hover:text-[#1d1d1f] transition-colors cursor-pointer"
                 title="Copy ID"
               >
                 {copiedKey === 'Reference ID' ? (
@@ -274,12 +274,12 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   <Copy className="w-4 h-4" />
                 )}
               </button>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+              <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.06]">
                 Property Pool
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-1">
-              <span>Owner: <strong className="text-slate-900">{submission.owner_name}</strong></span>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-[#86868b] mt-1">
+              <span>Owner: <strong className="text-[#1d1d1f]">{submission.owner_name}</strong></span>
               <span>•</span>
               <span className="text-[11px]">{new Date(submission.created_at).toLocaleString('en-IN')}</span>
             </div>
@@ -287,14 +287,14 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
         </div>
 
         {/* Action Buttons Toolbar */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           {/* WhatsApp CTA */}
           {submission.owner_phone && (
             <button
               onClick={() => setIsWhatsAppOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
             >
-              <MessageSquare className="w-4 h-4" />
+              <MessageSquare className="w-3.5 h-3.5" />
               <span>WhatsApp</span>
             </button>
           )}
@@ -303,20 +303,20 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           {submission.owner_phone && (
             <a
               href={`tel:${submission.owner_phone}`}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-all"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all"
             >
-              <Phone className="w-3.5 h-3.5 text-brand-600" />
-              <span>Call Owner</span>
+              <Phone className="w-3.5 h-3.5 text-[#1d1d1f]" />
+              <span>Call</span>
             </a>
           )}
 
           {/* Share CTA */}
           <button
             onClick={handleShareSummary}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
             title="Copy formatted summary"
           >
-            <Share2 className="w-3.5 h-3.5 text-indigo-600" />
+            <Share2 className="w-3.5 h-3.5" />
             <span>Share</span>
           </button>
 
@@ -325,13 +325,13 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
             <button
               type="button"
               onClick={() => setIsExportMenuOpen((prev) => !prev)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition-all cursor-pointer"
-              title="Export submission data with or without photos"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
+              title="Export submission data"
             >
               {isExportingCsv || isExportingZip ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#1d1d1f]" />
               ) : (
-                <Download className="w-3.5 h-3.5 text-indigo-600" />
+                <Download className="w-3.5 h-3.5 text-[#1d1d1f]" />
               )}
               <span>Export</span>
             </button>
@@ -342,8 +342,8 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   className="fixed inset-0 z-20"
                   onClick={() => setIsExportMenuOpen(false)}
                 />
-                <div className="absolute right-0 mt-1.5 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl p-2 z-30 animate-in fade-in zoom-in-95 duration-100 space-y-1">
-                  <div className="px-2.5 py-1 text-[10px] font-bold text-brand-600 uppercase tracking-wider bg-brand-50 rounded-lg">
+                <div className="absolute right-0 mt-2 w-72 bg-white/95 backdrop-blur-xl border border-black/[0.08] rounded-2xl shadow-apple-lg p-2 z-30 animate-in fade-in zoom-in-95 duration-100 space-y-1">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-[#86868b] uppercase tracking-wider">
                     This Property ({submission.registration_code})
                   </div>
 
@@ -351,12 +351,12 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     type="button"
                     onClick={() => handleExportCsv(true)}
                     disabled={isExportingCsv}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 text-left text-xs text-slate-700 font-medium transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#f5f5f7] text-left text-xs text-[#1d1d1f] font-medium transition-colors cursor-pointer disabled:opacity-50"
                   >
                     <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
                     <div>
-                      <div className="font-semibold text-slate-900">Export Property (CSV)</div>
-                      <div className="text-[10px] text-slate-500">Data spreadsheet (no photos)</div>
+                      <div className="font-semibold text-[#1d1d1f]">Export CSV</div>
+                      <div className="text-[10px] text-[#86868b]">Spreadsheet data</div>
                     </div>
                   </button>
 
@@ -364,39 +364,39 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     type="button"
                     onClick={() => handleExportZip(true)}
                     disabled={isExportingZip}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 text-left text-xs text-slate-700 font-medium transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[#f5f5f7] text-left text-xs text-[#1d1d1f] font-medium transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <Archive className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <Archive className="w-4 h-4 text-[#1d1d1f] shrink-0" />
                     <div>
-                      <div className="font-semibold text-slate-900">Export Property (ZIP Package)</div>
-                      <div className="text-[10px] text-slate-500">Data + all {media?.length || 0} photos</div>
+                      <div className="font-semibold text-[#1d1d1f]">Export ZIP</div>
+                      <div className="text-[10px] text-[#86868b]">Data + all {media?.length || 0} photos</div>
                     </div>
                   </button>
 
-                  <div className="border-t border-slate-100 my-1" />
+                  <div className="border-t border-black/[0.06] my-1" />
 
-                  <div className="px-2.5 py-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                    Entire Property Pool
+                  <div className="px-3 py-1.5 text-[10px] font-semibold text-[#86868b] uppercase tracking-wider">
+                    All Properties
                   </div>
 
                   <button
                     type="button"
                     onClick={() => handleExportCsv(false)}
                     disabled={isExportingCsv}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 text-left text-xs text-slate-600 font-medium transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#f5f5f7] text-left text-xs text-[#1d1d1f] font-medium transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-[11px]">Export All Pool Data (CSV)</span>
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-[#86868b] shrink-0" />
+                    <span className="text-[11px]">Export All (CSV)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleExportZip(false)}
                     disabled={isExportingZip}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-slate-50 text-left text-xs text-slate-600 font-medium transition-colors cursor-pointer disabled:opacity-50"
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl hover:bg-[#f5f5f7] text-left text-xs text-[#1d1d1f] font-medium transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    <Archive className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span className="text-[11px]">Export All Pool (ZIP + Photos)</span>
+                    <Archive className="w-3.5 h-3.5 text-[#86868b] shrink-0" />
+                    <span className="text-[11px]">Export All (ZIP)</span>
                   </button>
                 </div>
               </>
@@ -406,11 +406,11 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           {/* Delete Entry CTA */}
           <button
             onClick={() => setIsDeleteModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-all cursor-pointer"
-            title="Delete this property registration permanently"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-rose-50/80 hover:bg-rose-100 text-rose-700 border border-rose-200/60 text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
+            title="Delete this property registration"
           >
             <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-            <span>Delete Entry</span>
+            <span>Delete</span>
           </button>
         </div>
       </div>
@@ -420,30 +420,27 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
         {/* Left 2 Columns: Structured Dynamic Details & Media */}
         <div className="lg:col-span-2 space-y-6">
           {/* Property Pool Status Selector Card with Interactive Toggle Buttons */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                    Property Pool Lifecycle Status
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b]">
+                    Status
                   </h3>
                   {isUpdatingStatus && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-brand-600 font-medium">
+                    <span className="inline-flex items-center gap-1 text-[11px] text-[#1d1d1f] font-medium">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       Updating...
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Click any button below to immediately change status in database pool
-                </p>
               </div>
               <div className="sm:w-56">
                 <select
                   value={submission.status}
                   onChange={(e) => handleStatusChange(e.target.value)}
                   disabled={isUpdatingStatus}
-                  className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-semibold focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] text-xs font-semibold focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 transition-all outline-none cursor-pointer"
                 >
                   {PROPERTY_STATUS_OPTIONS.map((opt) => (
                     <option key={opt} value={opt}>
@@ -455,7 +452,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
             </div>
 
             {/* Interactive Quick Toggle Pills */}
-            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
+            <div className="flex flex-wrap gap-2 pt-2 border-t border-black/[0.04]">
               {PROPERTY_STATUS_OPTIONS.map((opt) => {
                 const isActive = submission.status === opt;
                 return (
@@ -464,10 +461,10 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     type="button"
                     onClick={() => handleStatusChange(opt)}
                     disabled={isUpdatingStatus}
-                    className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
                       isActive
-                        ? 'bg-brand-600 text-white shadow-sm ring-2 ring-brand-600/30'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 active:scale-95'
+                        ? 'bg-[#1d1d1f] text-white shadow-apple-sm'
+                        : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] active:scale-[0.98]'
                     }`}
                   >
                     {isActive && <Check className="w-3.5 h-3.5 text-white shrink-0" />}
@@ -482,15 +479,15 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           {schema?.sections?.map((sec) => (
             <div
               key={sec.id || sec.title}
-              className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-5"
+              className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4"
             >
-              <div className="border-b border-slate-200 pb-3">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">{sec.title}</h3>
-                {sec.description && <p className="text-[11px] text-slate-500">{sec.description}</p>}
+              <div className="border-b border-black/[0.06] pb-3">
+                <h3 className="text-sm font-bold text-[#1d1d1f] tracking-tight">{sec.title}</h3>
+                {sec.description && <p className="text-[11px] text-[#86868b]">{sec.description}</p>}
               </div>
 
               {/* Dynamic Field Values Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                 {sec.fields.map((f) => {
                   const val = raw[f.field_key];
 
@@ -504,27 +501,27 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     const locUrl = typeof val === 'object' ? (val.url || val.location_url) : val;
                     const isValidMaps = locUrl && /^https:\/\/(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(locUrl).trim());
                     return (
-                      <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
+                      <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-2">
                         <div className="flex items-center justify-between">
-                          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                          <div className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">
                             {f.label}
                           </div>
                           {locUrl && !isValidMaps && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
                               <AlertTriangle className="w-3 h-3" />
                               <span>Non-Google Maps Link</span>
                             </span>
                           )}
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="text-xs text-slate-900 font-mono break-all leading-relaxed">
+                          <div className="text-xs text-[#1d1d1f] font-mono break-all leading-relaxed">
                             {locUrl || 'No Google location link provided'}
                           </div>
                           {locUrl && (
                             <div className="flex items-center gap-2 shrink-0">
                               <button
                                 onClick={() => handleCopy(locUrl, 'Location URL')}
-                                className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700"
+                                className="p-2 rounded-full bg-white border border-black/[0.08] hover:bg-[#f5f5f7] text-[#1d1d1f] shadow-apple-sm transition-all"
                                 title="Copy Link"
                               >
                                 <Copy className="w-3.5 h-3.5" />
@@ -534,7 +531,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                                   href={locUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-xs"
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all"
                                 >
                                   <MapPin className="w-3.5 h-3.5" />
                                   <span>Open Maps</span>
@@ -544,7 +541,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                                   href={locUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold shadow-xs"
+                                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all"
                                   title="Open External Link"
                                 >
                                   <ExternalLink className="w-3.5 h-3.5" />
@@ -562,18 +559,18 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   if (f.field_type === 'direction') {
                     const isLink = String(val).startsWith('http');
                     return (
-                      <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                      <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-1">
+                        <div className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">
                           {f.label}
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-xs text-slate-900 leading-relaxed break-words">{val || 'N/A'}</span>
+                          <span className="text-xs text-[#1d1d1f] leading-relaxed break-words">{val || 'N/A'}</span>
                           {isLink && (
                             <a
                               href={String(val)}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-brand-600 hover:text-brand-700 text-xs font-semibold shrink-0"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white border border-black/[0.08] text-[#1d1d1f] hover:bg-[#f5f5f7] text-xs font-semibold shrink-0 shadow-apple-sm"
                             >
                               <Compass className="w-3.5 h-3.5" />
                               <span>Navigate</span>
@@ -589,17 +586,17 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     const items: string[] = Array.isArray(val) ? val : [];
                     return (
                       <div key={f.field_key} className="md:col-span-2 space-y-1.5">
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                        <div className="text-[10px] font-bold text-[#86868b] uppercase tracking-wider">
                           {f.label}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {items.length === 0 ? (
-                            <span className="text-xs text-slate-400">None selected</span>
+                            <span className="text-xs text-[#86868b]">None selected</span>
                           ) : (
                             items.map((item, idx) => (
                               <span
                                 key={idx}
-                                className="px-2.5 py-1 rounded-lg bg-brand-50 border border-brand-200 text-brand-700 text-xs font-medium"
+                                className="px-3 py-1 rounded-full bg-[#f5f5f7] border border-black/[0.06] text-[#1d1d1f] text-xs font-medium"
                               >
                                 {item}
                               </span>
@@ -627,16 +624,16 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   return (
                     <div
                       key={f.field_key}
-                      className={`p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5 ${
+                      className={`p-4 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-1.5 ${
                         isAddressOrLong ? 'md:col-span-2' : ''
                       }`}
                     >
-                      <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center justify-between">
+                      <div className="text-[10px] uppercase font-bold text-[#86868b] tracking-wider flex items-center justify-between">
                         <span className="truncate">{f.label}</span>
                         {cleanVal && (
                           <button
                             onClick={() => handleCopy(cleanVal, f.label)}
-                            className="text-slate-400 hover:text-slate-700 p-0.5 shrink-0"
+                            className="text-[#86868b] hover:text-[#1d1d1f] p-0.5 shrink-0 transition-colors cursor-pointer"
                             title={`Copy ${f.label}`}
                           >
                             <Copy className="w-3 h-3" />
@@ -644,7 +641,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                         )}
                       </div>
                       <div
-                        className={`text-xs font-semibold text-slate-900 ${
+                        className={`text-xs font-semibold text-[#1d1d1f] ${
                           isAddressOrLong ? 'break-words whitespace-pre-wrap leading-relaxed' : 'break-words'
                         }`}
                       >
@@ -673,9 +670,9 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
             if (remainingKeys.length === 0) return null;
 
             return (
-              <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Additional Submitted Fields</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4">
+                <h3 className="text-sm font-bold text-[#1d1d1f] tracking-tight">Additional Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   {remainingKeys.map((k) => {
                     const rawVal = raw[k];
                     const cleanStr = typeof rawVal === 'object'
@@ -685,15 +682,15 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                     return (
                       <div
                         key={k}
-                        className={`p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5 ${
+                        className={`p-4 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-1.5 ${
                           isLong ? 'md:col-span-2' : ''
                         }`}
                       >
-                        <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                        <div className="text-[10px] uppercase font-bold text-[#86868b] tracking-wider">
                           {k.replace(/_/g, ' ')}
                         </div>
                         <div
-                          className={`text-xs font-semibold text-slate-900 ${
+                          className={`text-xs font-semibold text-[#1d1d1f] ${
                             isLong ? 'break-words whitespace-pre-wrap leading-relaxed' : 'break-words'
                           }`}
                         >
@@ -708,7 +705,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           })()}
 
           {/* Media Section (Lightbox & Video Player) */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm">
+          <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm">
             <MediaGalleryViewer media={media} />
           </div>
         </div>
@@ -716,19 +713,19 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
         {/* Right 1 Column: Property Notes & Audit Trail */}
         <div className="space-y-6">
           {/* Property Team Notes */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 flex items-center gap-2">
-              <FileText className="w-4 h-4 text-brand-600" />
-              <span>Property Pool Notes</span>
+          <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#1d1d1f] flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#1d1d1f]" />
+              <span>Notes</span>
             </h3>
 
             <form onSubmit={handleAddNote} className="space-y-3">
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Note Category</label>
+                <label className="block text-[11px] font-medium text-[#86868b] mb-1">Category</label>
                 <select
                   value={noteCategory}
                   onChange={(e) => setNoteCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:outline-none focus:border-brand-500"
+                  className="w-full px-3.5 py-2 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] text-xs font-medium focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all cursor-pointer"
                 >
                   <option value="">Select Category</option>
                   {NOTE_CATEGORIES.map((cat) => (
@@ -738,43 +735,43 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
               </div>
 
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">Observation / Remark</label>
+                <label className="block text-[11px] font-medium text-[#86868b] mb-1">Observation</label>
                 <textarea
                   rows={3}
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
-                  placeholder="Record property observations, verified details, owner discussion notes..."
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs leading-relaxed focus:bg-white focus:outline-none focus:border-brand-500"
+                  placeholder="Add note..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] text-xs leading-relaxed focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all resize-none"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={submittingNote || !newNote.trim()}
-                className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm flex items-center justify-center gap-2 disabled:opacity-40 transition-colors cursor-pointer"
+                className="w-full py-2.5 rounded-full bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white text-xs font-semibold shadow-apple-sm flex items-center justify-center gap-2 disabled:opacity-40 active:scale-[0.98] transition-all cursor-pointer"
               >
                 {submittingNote ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                <span>Add Property Note</span>
+                <span>Add Note</span>
               </button>
             </form>
 
             {/* Notes Timeline */}
-            <div className="pt-3 border-t border-slate-200 space-y-3 max-h-80 overflow-y-auto">
+            <div className="pt-3 border-t border-black/[0.04] space-y-2.5 max-h-80 overflow-y-auto">
               {notes.length === 0 ? (
-                <div className="text-[11px] text-slate-400 text-center py-4">
-                  No property notes recorded yet.
+                <div className="text-[11px] text-[#86868b] text-center py-4">
+                  No notes recorded yet.
                 </div>
               ) : (
                 notes.map((n) => (
                   <div
                     key={n.id}
-                    className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5"
+                    className="p-3.5 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-1"
                   >
                     <div className="flex items-center justify-between text-[10px]">
-                      <span className="font-semibold text-brand-600">
+                      <span className="font-semibold text-[#1d1d1f]">
                         {n.user?.full_name || 'Admin'}
                       </span>
-                      <span className="text-slate-400">
+                      <span className="text-[#86868b]">
                         {new Date(n.created_at).toLocaleString('en-IN', {
                           month: 'short',
                           day: 'numeric',
@@ -784,11 +781,11 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                       </span>
                     </div>
                     {n.call_status && (
-                      <span className="inline-flex px-2 py-0.5 rounded-md text-[10px] font-bold bg-brand-50 text-brand-700 border border-brand-200">
+                      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white border border-black/[0.06] text-[#1d1d1f]">
                         {n.call_status}
                       </span>
                     )}
-                    <p className="text-xs text-slate-700 leading-relaxed">{n.note}</p>
+                    <p className="text-xs text-[#1d1d1f] leading-relaxed">{n.note}</p>
                   </div>
                 ))
               )}
@@ -796,19 +793,19 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           </div>
 
           {/* Audit History Card */}
-          <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Audit History
+          <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-3">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#86868b]">
+              Audit Log
             </h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {audit_logs.map((log) => (
-                <div key={log.id} className="text-[11px] text-slate-600 flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 mt-1.5 shrink-0" />
+                <div key={log.id} className="text-[11px] text-[#86868b] flex items-start gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#1d1d1f] mt-1.5 shrink-0" />
                   <div>
-                    <span className="font-medium text-slate-800 capitalize">
+                    <span className="font-medium text-[#1d1d1f] capitalize">
                       {log.action.replace(/_/g, ' ')}
                     </span>
-                    <span className="text-[10px] text-slate-400 ml-1.5">
+                    <span className="text-[10px] text-[#86868b] ml-1.5">
                       {new Date(log.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -821,20 +818,20 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
 
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 p-6 shadow-2xl space-y-4 animate-in zoom-in-95">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl border border-black/[0.08] p-6 shadow-apple-lg space-y-4 animate-in zoom-in-95">
+            <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto border border-rose-200">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1.5">
-              <h3 className="text-base font-bold text-slate-900 font-display">
+              <h3 className="text-base font-bold text-[#1d1d1f]">
                 Delete Property Entry?
               </h3>
-              <p className="text-xs text-slate-500">
-                Are you sure you want to permanently delete registration{' '}
-                <strong className="text-slate-800 font-mono">{submission.registration_code}</strong>?
-                All property details, photos, and history will be permanently deleted from the database.
+              <p className="text-xs text-[#86868b]">
+                Are you sure you want to delete registration{' '}
+                <strong className="text-[#1d1d1f] font-mono">{submission.registration_code}</strong>?
+                This action cannot be undone.
               </p>
             </div>
 
@@ -843,7 +840,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                 type="button"
                 onClick={() => setIsDeleteModalOpen(false)}
                 disabled={isDeleting}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-full bg-white hover:bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
               >
                 Cancel
               </button>
@@ -851,10 +848,10 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                 type="button"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-md shadow-rose-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
-                <span>{isDeleting ? 'Deleting...' : 'Yes, Delete'}</span>
+                <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
               </button>
             </div>
           </div>

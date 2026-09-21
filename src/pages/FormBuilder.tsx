@@ -218,34 +218,36 @@ export const FormBuilder: React.FC = () => {
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto pb-16">
-      {/* Header Actions */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-5xl mx-auto pb-16 font-sans">
+      {/* Header Card */}
+      <div className="bg-white/80 backdrop-blur-xl border border-black/[0.06] rounded-3xl p-5 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-apple-sm">
         <div>
-          <h2 className="text-lg font-bold font-display text-slate-900 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-brand-600" />
-            <span>Form Fields Configuration</span>
+          <h2 className="text-xl font-bold tracking-tight text-[#1d1d1f] flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-xl bg-[#f5f5f7] flex items-center justify-center text-[#1d1d1f]">
+              <FileText className="w-4 h-4" />
+            </span>
+            <span>Form Fields</span>
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Add or remove fields like photos, number, text, address, and maps. Connect form updates instantly.
+          <p className="text-xs text-[#86868b] mt-1">
+            Configure dynamic fields for the property registration portal.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
             type="button"
             onClick={handleResetToDefault}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
             title="Reset to default fields"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Defaults</span>
+            <span>Reset</span>
           </button>
 
           <button
             type="button"
             onClick={handleAddField}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-sm active:scale-95 transition-all"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] text-xs font-semibold active:scale-[0.98] transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Add Field</span>
@@ -255,17 +257,17 @@ export const FormBuilder: React.FC = () => {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md active:scale-95 transition-all disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-5 py-2 rounded-full bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
           >
             {saving ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Saving...</span>
               </>
             ) : (
               <>
-                <Save className="w-4 h-4" />
-                <span>Save Changes</span>
+                <Save className="w-3.5 h-3.5" />
+                <span>Save</span>
               </>
             )}
           </button>
@@ -275,10 +277,10 @@ export const FormBuilder: React.FC = () => {
       {/* Feedback Banner */}
       {feedback && (
         <div
-          className={`flex items-center gap-3 p-4 rounded-xl text-xs font-semibold ${
+          className={`flex items-center gap-3 p-4 rounded-2xl text-xs font-medium border animate-in fade-in slide-in-from-top-2 ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
-              : 'bg-rose-50 border border-rose-200 text-rose-700'
+              ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50/80 border-rose-200 text-rose-800'
           }`}
         >
           {feedback.type === 'success' ? (
@@ -293,15 +295,15 @@ export const FormBuilder: React.FC = () => {
       {/* Fields List */}
       <div className="space-y-3">
         {fields.length === 0 ? (
-          <div className="text-center py-16 bg-white border border-dashed border-slate-200 rounded-2xl p-6">
-            <p className="text-xs text-slate-500 mb-3">No fields configured yet.</p>
+          <div className="text-center py-16 bg-white border border-dashed border-black/[0.08] rounded-3xl p-6">
+            <p className="text-xs text-[#86868b] mb-4">No fields configured yet.</p>
             <button
               type="button"
               onClick={handleAddField}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#1d1d1f] text-white text-xs font-semibold active:scale-[0.98] shadow-apple-sm transition-all"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Your First Field</span>
+              <span>Add Field</span>
             </button>
           </div>
         ) : (
@@ -313,12 +315,12 @@ export const FormBuilder: React.FC = () => {
             return (
               <div
                 key={idx}
-                className="bg-white border border-slate-200 rounded-2xl p-4 transition-all hover:border-slate-300 shadow-sm"
+                className="bg-white border border-black/[0.06] rounded-2xl p-4 sm:p-5 transition-all hover:border-black/[0.12] shadow-apple-sm space-y-3"
               >
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   {/* Left: Index & Name */}
-                  <div className="flex items-center gap-3 w-full sm:w-1/2">
-                    <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 font-mono text-xs font-semibold flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-2.5 w-full sm:w-1/2">
+                    <span className="w-7 h-7 rounded-full bg-[#f5f5f7] text-[#1d1d1f] font-mono text-xs font-semibold flex items-center justify-center shrink-0">
                       {idx + 1}
                     </span>
                     <div className="flex-1">
@@ -326,8 +328,8 @@ export const FormBuilder: React.FC = () => {
                         type="text"
                         value={field.label}
                         onChange={(e) => handleUpdateField(idx, 'label', e.target.value)}
-                        placeholder="Field Name (e.g. Property Photos, Price)"
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs font-semibold focus:bg-white focus:outline-none focus:border-brand-500"
+                        placeholder="Field Name"
+                        className="w-full px-3.5 py-2 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] placeholder:text-[#86868b] text-xs font-medium focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -337,7 +339,7 @@ export const FormBuilder: React.FC = () => {
                     <select
                       value={field.field_type}
                       onChange={(e) => handleUpdateField(idx, 'field_type', e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 text-xs font-medium focus:bg-white focus:outline-none focus:border-brand-500"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] text-xs font-medium focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all cursor-pointer"
                     >
                       {FIELD_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>
@@ -348,23 +350,23 @@ export const FormBuilder: React.FC = () => {
                   </div>
 
                   {/* Right: Required Checkbox, Move Buttons, Delete */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-black/[0.04]">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input
                         type="checkbox"
                         checked={field.is_required}
                         onChange={(e) => handleUpdateField(idx, 'is_required', e.target.checked)}
-                        className="w-4 h-4 rounded border-slate-300 bg-white text-brand-600 focus:ring-0 cursor-pointer"
+                        className="w-4 h-4 rounded-md border-black/20 text-[#1d1d1f] focus:ring-0 cursor-pointer accent-[#1d1d1f]"
                       />
-                      <span className="text-[11px] font-semibold text-slate-700">Required</span>
+                      <span className="text-[11px] font-medium text-[#1d1d1f]">Required</span>
                     </label>
 
-                    <div className="flex items-center gap-1 border-l border-slate-200 pl-2">
+                    <div className="flex items-center gap-1 border-l border-black/[0.06] pl-2">
                       <button
                         type="button"
                         onClick={() => handleMove(idx, 'up')}
                         disabled={idx === 0}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
+                        className="p-1.5 rounded-lg text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] disabled:opacity-25 transition-colors cursor-pointer"
                         title="Move Up"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
@@ -374,7 +376,7 @@ export const FormBuilder: React.FC = () => {
                         type="button"
                         onClick={() => handleMove(idx, 'down')}
                         disabled={idx === fields.length - 1}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 hover:bg-slate-100 disabled:opacity-30"
+                        className="p-1.5 rounded-lg text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] disabled:opacity-25 transition-colors cursor-pointer"
                         title="Move Down"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
@@ -383,7 +385,7 @@ export const FormBuilder: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleRemoveField(idx)}
-                        className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 ml-1"
+                        className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 ml-1 transition-colors cursor-pointer"
                         title="Delete Field"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -394,8 +396,8 @@ export const FormBuilder: React.FC = () => {
 
                 {/* Optional: Dropdown options input if field_type === 'dropdown' */}
                 {field.field_type === 'dropdown' && (
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                  <div className="pt-2.5 border-t border-black/[0.04]">
+                    <label className="block text-[11px] font-medium text-[#86868b] mb-1">
                       Options (comma-separated):
                     </label>
                     <input
@@ -403,7 +405,7 @@ export const FormBuilder: React.FC = () => {
                       defaultValue={optionsString}
                       onBlur={(e) => handleUpdateOptions(idx, e.target.value)}
                       placeholder="e.g. Rent, Re-sale"
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 text-xs focus:bg-white focus:outline-none focus:border-brand-500"
+                      className="w-full px-3.5 py-1.5 rounded-xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] placeholder:text-[#86868b] text-xs focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all"
                     />
                   </div>
                 )}
@@ -414,31 +416,31 @@ export const FormBuilder: React.FC = () => {
       </div>
 
       {/* Bottom Save & Add Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-black/[0.06]">
         <button
           type="button"
           onClick={handleAddField}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white hover:bg-[#f5f5f7] text-[#1d1d1f] border border-black/[0.08] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Another Field</span>
+          <span>Add Field</span>
         </button>
 
         <button
           type="button"
           onClick={handleSave}
           disabled={saving}
-          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md active:scale-95 transition-all disabled:opacity-50"
+          className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#1d1d1f] hover:bg-[#2d2d2f] text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
         >
           {saving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Saving Changes...</span>
+              <span>Saving...</span>
             </>
           ) : (
             <>
               <Save className="w-4 h-4" />
-              <span>Save Form Fields</span>
+              <span>Save Changes</span>
             </>
           )}
         </button>

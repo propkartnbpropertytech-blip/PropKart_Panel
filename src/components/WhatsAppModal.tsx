@@ -56,24 +56,24 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200 font-sans">
+      <div className="bg-white border border-black/[0.08] rounded-3xl w-full max-w-lg shadow-apple-lg overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between text-slate-900">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-sm shadow-emerald-600/30">
+        <div className="px-6 py-4 border-b border-black/[0.06] flex items-center justify-between text-[#1d1d1f]">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-apple-sm">
               <MessageSquare className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold font-display">Send WhatsApp Message</h3>
-              <p className="text-[11px] text-slate-500">To: {submission.owner_name} (+{indianNumber})</p>
+              <h3 className="text-sm font-bold text-[#1d1d1f]">WhatsApp</h3>
+              <p className="text-[11px] text-[#86868b]">To: {submission.owner_name} (+{indianNumber})</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-full text-[#86868b] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
@@ -81,16 +81,16 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
         <div className="p-6 space-y-4">
           {/* Templates Pills */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-2">Select Message Template</label>
+            <label className="block text-xs font-semibold text-[#1d1d1f] mb-2">Select Template</label>
             <div className="flex flex-wrap gap-2">
               {defaultTemplates.map((t, idx) => (
                 <button
                   key={t.title}
                   onClick={() => handleSelectTemplate(idx)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
                     selectedTemplate === idx
-                      ? 'bg-emerald-50 border-emerald-400 text-emerald-700 font-semibold'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                      ? 'bg-[#1d1d1f] text-white shadow-apple-sm'
+                      : 'bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f]'
                   }`}
                 >
                   {t.title}
@@ -101,36 +101,36 @@ export const WhatsAppModal: React.FC<WhatsAppModalProps> = ({
 
           {/* Editable Text Area */}
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1.5">Message Content</label>
+            <label className="block text-xs font-semibold text-[#1d1d1f] mb-1.5">Message Content</label>
             <textarea
               rows={5}
               value={customMessage}
               onChange={(e) => setCustomMessage(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs leading-relaxed focus:bg-white focus:outline-none focus:border-emerald-500"
+              className="w-full px-4 py-3 rounded-2xl bg-[#f5f5f7] border border-transparent text-[#1d1d1f] text-xs leading-relaxed focus:bg-white focus:border-black/20 focus:ring-2 focus:ring-black/5 outline-none transition-all resize-none"
             />
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between gap-3 bg-slate-50">
+        <div className="px-6 py-4 border-t border-black/[0.06] flex items-center justify-between gap-3 bg-[#f5f5f7]/50">
           <button
             onClick={copyMessage}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-white text-slate-700 text-xs font-semibold transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-white hover:bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? 'Copied' : 'Copy Text'}</span>
+            <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
 
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-slate-600 hover:text-slate-900 text-xs font-semibold"
+              className="px-4 py-2 rounded-full text-[#86868b] hover:text-[#1d1d1f] text-xs font-semibold transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               onClick={openWhatsApp}
-              className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>Open in WhatsApp</span>
