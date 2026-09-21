@@ -11,3 +11,15 @@ export const apiRateLimit = rateLimit({
         errorCode: "RATE_LIMITED",
     },
 });
+
+export const authRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // limit each IP to 10 login attempts per 15 minutes
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+        success: false,
+        message: "Too many login attempts from this IP. Please try again after 15 minutes.",
+        errorCode: "TOO_MANY_LOGIN_ATTEMPTS",
+    },
+});

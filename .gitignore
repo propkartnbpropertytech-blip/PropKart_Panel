@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and build outputs
 node_modules
 dist
 dist-ssr
@@ -24,8 +25,28 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment variables
+# Environment variables & secrets (Strict Z+ Security)
 .env
 .env.*
 !.env.example
 vps.txt
+*.pem
+*.key
+*.pub
+id_rsa*
+*.cred*
+secret*
+
+# Database dumps & archives
+*.sql
+*.dump
+*.tar.gz
+*.tgz
+*.zip
+
+# Uploaded user media
+server/public/uploads/*
+!server/public/uploads/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
+uploads/

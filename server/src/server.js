@@ -10,11 +10,43 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-// Enable CORS for public Connect app & private Panel portal
+// Trust reverse proxy (Traefik / Nginx) for accurate client IP identification in rate-limiting
+app.set('trust proxy', 1);
+
+// Security: Disable X-Powered-By header
+app.disable("x-powered-by");
+
+// Security Headers middleware
+app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "SAMEORIGIN");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    next();
+});
+
+// Restrict CORS origins to official domains and trusted local dev
+const allowedOrigins = [
+    "https://propconnect.nbpropertytech.com",
+    "https://panel.nbpropertytech.com",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:5173",
+    "http://localhost:5050",
+];
+
 app.use(cors({
-    origin: "*",
+    origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.includes(origin) || origin.endsWith(".nbpropertytech.com")) {
+            return callback(null, true);
+        }
+        return callback(new Error("CORS policy violation: Access denied."));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+    exposedHeaders: ["Content-Disposition"],
+    credentials: true,
 }));
 
 app.use(express.json({ limit: "50mb" }));
@@ -70,11 +102,18 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
     console.error("Unhandled API Error:", err);
     const statusCode = err.status || err.statusCode || 500;
+    const isProduction = process.env.NODE_ENV === "production";
+
+    // In production, never leak internal database or system error details
+    const message = (isProduction && statusCode >= 500)
+        ? "An internal server error occurred. Please try again later."
+        : (err.message || "Internal Server Error");
+
     res.status(statusCode).json({
         success: false,
-        message: err.message || "Internal Server Error",
+        message,
         errorCode: err.errorCode || "INTERNAL_SERVER_ERROR",
-        errors: err.errors || [],
+        errors: isProduction && statusCode >= 500 ? [] : (err.errors || []),
     });
 });
 

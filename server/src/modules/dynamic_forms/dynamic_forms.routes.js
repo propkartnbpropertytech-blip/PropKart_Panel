@@ -6,6 +6,7 @@ import { uploadMiddleware } from "./dynamic_forms.upload.js";
 import {
     submitFormSchema,
     updateSubmissionStatusSchema,
+    updateAssistancePhoneSchema,
     assignSubmissionSchema,
     addTelecallerNoteSchema,
     updateSubmissionDataSchema,
@@ -51,7 +52,26 @@ const panelRoles = requireRole("Super Admin", "Admin", "Telecaller", "Sales");
 // Submissions List & Dashboard Stats
 router.get("/admin/submissions", authenticate, panelRoles, controller.listSubmissions);
 router.get("/admin/submissions/stats", authenticate, panelRoles, controller.getSubmissionStats);
+router.get("/admin/users", authenticate, panelRoles, controller.listActiveUsers);
+router.get("/admin/submissions/export/zip", authenticate, panelRoles, controller.exportSubmissionsZip);
+router.get("/admin/submissions/export/csv", authenticate, panelRoles, controller.exportSubmissionsCsv);
 router.get("/admin/submissions/:id", authenticate, panelRoles, controller.getSubmissionById);
+
+// Permanently Delete Submission
+router.delete("/admin/submissions/:id", authenticate, panelRoles, controller.deleteSubmission);
+
+// Bulk Actions: Delete & Status
+router.post("/admin/submissions/bulk-delete", authenticate, panelRoles, controller.bulkDeleteSubmissions);
+router.patch("/admin/submissions/bulk-status", authenticate, panelRoles, controller.bulkUpdateStatus);
+
+// Update Header Assistance Phone
+router.patch(
+    "/admin/forms/assistance-phone",
+    authenticate,
+    requireRole("Super Admin", "Admin"),
+    validate(updateAssistancePhoneSchema),
+    controller.updateAssistancePhone
+);
 
 // Submission Workflow Updates
 router.patch(

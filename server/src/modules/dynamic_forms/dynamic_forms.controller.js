@@ -381,3 +381,119 @@ export async function createNewDraftVersion(req, res, next) {
         next(err);
     }
 }
+
+/**
+ * DELETE /api/v1/admin/submissions/:id
+ * Permanently delete property entry and cascade media
+ */
+export async function deleteSubmission(req, res, next) {
+    try {
+        const { id } = req.params;
+        const deleted = await repo.deleteSubmissionRecord(id, req.user?.id);
+
+        return res.status(200).json({
+            success: true,
+            message: "Property submission deleted successfully.",
+            data: deleted,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * POST /api/v1/admin/submissions/bulk-delete
+ * Bulk delete property submissions
+ */
+export async function bulkDeleteSubmissions(req, res, next) {
+    try {
+        const { ids } = req.body;
+        const result = await repo.bulkDeleteSubmissions(ids, req.user?.id);
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully deleted ${result.count} properties.`,
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * PATCH /api/v1/admin/submissions/bulk-status
+ * Bulk update submission status
+ */
+export async function bulkUpdateStatus(req, res, next) {
+    try {
+        const { ids, status } = req.body;
+        const result = await repo.bulkUpdateSubmissionStatus(ids, status, req.user?.id);
+
+        return res.status(200).json({
+            success: true,
+            message: `Successfully updated ${result.count} properties to "${status}".`,
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * PATCH /api/v1/admin/forms/assistance-phone
+ * Update header assistance phone number
+ */
+export async function updateAssistancePhone(req, res, next) {
+    try {
+        const { assistance_phone } = req.body;
+        const updated = await repo.updateAssistancePhone(assistance_phone);
+
+        return res.status(200).json({
+            success: true,
+            message: "Assistance phone number updated successfully.",
+            data: updated,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/v1/admin/submissions/export-zip
+ * Download complete ZIP archive with properties report and all photos
+ */
+export async function exportSubmissionsZip(req, res, next) {
+    try {
+        await repo.exportSubmissionsZipStream(res, req.query);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/v1/admin/submissions/export-csv
+ * Download properties CSV data spreadsheet
+ */
+export async function exportSubmissionsCsv(req, res, next) {
+    try {
+        await repo.exportSubmissionsCsv(res, req.query);
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/v1/admin/users
+ * Returns system users for assignments
+ */
+export async function listActiveUsers(req, res, next) {
+    try {
+        const users = await repo.getActiveUsers();
+        return res.status(200).json({
+            success: true,
+            data: users,
+        });
+    } catch (err) {
+        next(err);
+    }
+}

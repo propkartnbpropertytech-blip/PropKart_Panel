@@ -4,8 +4,8 @@ import { Building2, Lock, Mail, Loader2, AlertCircle, ShieldCheck } from 'lucide
 
 export const Login: React.FC = () => {
   const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState('admin');
-  const [password, setPassword] = useState('Propkart@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -55,7 +55,8 @@ export const Login: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="admin or admin@propkart.in"
+                autoComplete="username"
+                placeholder="Enter your username or email"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-xs focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
               />
               <Mail className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -70,7 +71,8 @@ export const Login: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="••••••••••••"
+                autoComplete="current-password"
+                placeholder="Enter your password"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 placeholder:text-slate-400 text-xs focus:bg-white focus:outline-none focus:border-brand-500 transition-colors"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />

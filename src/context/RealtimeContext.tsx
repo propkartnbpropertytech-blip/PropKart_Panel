@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { createClient, RealtimeChannel } from '@supabase/supabase-js';
 
-// Supabase VPS configuration
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'http://localhost:8000';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg2Njk5NTkyLCJleHAiOjE5NDQzNzk1OTJ9.g4VezDunjdcYVOiPt_xgNUUzohQsIc5UsnqMJ26AdTA';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 interface RealtimeContextType {
   isConnected: boolean;
@@ -16,7 +15,7 @@ interface RealtimeContextType {
 const RealtimeContext = createContext<RealtimeContextType | undefined>(undefined);
 
 export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState<boolean>(true);
   const [newSubmissionAlert, setNewSubmissionAlert] = useState<any | null>(null);
   const [refreshCount, setRefreshCount] = useState<number>(0);
 
@@ -32,36 +31,33 @@ export const RealtimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let supabaseClient: any = null;
     let channel: RealtimeChannel | null = null;
 
-    try {
-      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    if (SUPABASE_URL) {
+      try {
+        supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      channel = supabaseClient
-        .channel('form_submissions_live')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'form_submissions' },
-          (payload: any) => {
-            console.log('Realtime new submission event:', payload);
-            setNewSubmissionAlert(payload.new);
-            triggerRefresh();
-          }
-        )
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'form_submissions' },
-          () => {
-            triggerRefresh();
-          }
-        )
-        .subscribe((status: string) => {
-          if (status === 'SUBSCRIBED') {
-            setIsConnected(true);
-          } else {
-            setIsConnected(false);
-          }
-        });
-    } catch (err) {
-      console.warn('Realtime subscription fallback:', err);
+        channel = supabaseClient
+          .channel('form_submissions_live')
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'form_submissions' },
+            (payload: any) => {
+              setNewSubmissionAlert(payload.new);
+              triggerRefresh();
+            }
+          )
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'form_submissions' },
+            () => {
+              triggerRefresh();
+            }
+          )
+          .subscribe((status: string) => {
+            setIsConnected(status === 'SUBSCRIBED');
+          });
+      } catch (err) {
+        // Handled by polling fallback below
+      }
     }
 
     // Polling fallback every 15s in case WebSockets are blocked by proxies

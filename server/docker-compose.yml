@@ -14,13 +14,13 @@ services:
     ports:
       - "5050:5050"
     environment:
-      - PORT=5050
-      - NODE_ENV=production
-      - SUPABASE_URL=http://200.234.36.120:8000
-      - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODY2OTk1OTIsImV4cCI6MTk0NDM3OTU5Mn0.w9-KOzXxgOfhiuS0j1CyWMwbnbmNnXy2cOBFFx2hj2Y
-      - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg2Njk5NTkyLCJleHAiOjE5NDQzNzk1OTJ9.g4VezDunjdcYVOiPt_xgNUUzohQsIc5UsnqMJ26AdTA
-      - JWT_SECRET=propkart-forms-standalone-secret-key-2026
-      - APP_URL=http://200.234.36.120:5050
+      - PORT=${PORT:-5050}
+      - NODE_ENV=${NODE_ENV:-production}
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - APP_URL=${APP_URL}
     networks:
       - propkart-forms-net
 

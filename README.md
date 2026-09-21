@@ -90,7 +90,6 @@ npm run dev
 npm test
 ```
 
-### Production Build
 ```bash
 # Build production bundle
 npm run build
@@ -101,18 +100,33 @@ npm run preview
 
 ---
 
-## 🚀 CI/CD Pipeline
+## 🚀 CI/CD Pipeline & Automated Deployment (v1.0.0)
 
-- **GitHub Actions CI (`.github/workflows/ci.yml`):**
-  - Triggered on PRs and pushes to `main`.
-  - Runs dependency install, unit tests (`vitest`), and TypeScript production build.
-- **GitHub Actions Deploy (`.github/workflows/deploy.yml`):**
-  - Builds production bundle and runs smoke verification.
+Every push to `main` triggers automated build and deployment to the Hostinger VPS via GitHub Actions:
+
+- **Workflow:** [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+- **Production URL:** `https://panel.nbpropertytech.com`
+- **Zero-Touch Isolation Policy:** The deployment workflow strictly targets `/root/propconnect-stack/panel-dist` and `/root/propconnect-stack/server`, rebuilding only the standalone `propconnect-api` and restarting `propconnect-panel`. It has zero interaction with any other container on the VPS (`traefik`, `propkart-backend`, `supabase-db`, etc.).
+
+### Required GitHub Repository Secrets
+
+Configure the following secrets in **Repository Settings → Secrets and variables → Actions**:
+
+| Secret Name | Description | Example / Recommended Value |
+|---|---|---|
+| `VPS_HOST` | Hostinger VPS Public IP Address | `200.234.36.120` |
+| `VPS_USERNAME` | SSH User | `root` |
+| `VPS_SSH_KEY` | Dedicated OpenSSH ed25519 Deployment Private Key | Key generated on VPS (`/root/.ssh/github_actions_deploy_key`) |
+| `VPS_SSH_PASSWORD` | Fallback SSH password (if key is not provided) | VPS password |
+| `VPS_PORT` | SSH Port (default: `22`) | `22` |
 
 ---
 
-## 🔐 Authentication & Security
+## 🔐 Z+ Security & Encryption Hardening
 
-- Authenticates against `/api/v1/auth/login` using secure JWT tokens.
-- Role-based access control (`Super Admin`, `Admin`, `Telecaller`, `Sales`).
-- All administrative and telecaller actions are recorded in `submission_audit_logs`.
+- **Zero Secret Credentials in Git:** All API URLs use relative paths (`/api/v1`), `.env` files are ignored, and zero tokens, passwords, or keys exist in the codebase.
+- **AES-256-GCM Database Encryption at Rest:** All sensitive property submission fields (`owner_name`, `owner_phone`, `owner_email`, `address`, `location_url`, `raw_data`) are stored as authenticated AES-256-GCM ciphertexts (`enc:v1:<iv>:<tag>:<cipher>`).
+- **In-Memory Decryption:** Decryption occurs strictly in memory for authenticated operators with valid JWT sessions.
+- **Login Hardening:** Prefilled credentials removed, anti-user-enumeration messages enforced, and strict `authRateLimit` (max 10 attempts / 15 min).
+- **Reverse Proxy Architecture:** Nginx acts as reverse proxy on port 80, terminating SSL via Traefik and proxying `/api/v1/` to `propconnect-api:5050`.
+

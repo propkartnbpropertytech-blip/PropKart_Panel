@@ -23,16 +23,27 @@ export const updateSubmissionStatusSchema = z.object({
     body: z.object({
         status: z.enum([
             "New",
+            "Under Review",
+            "Details Verified",
+            "Active Listing",
+            "Under Discussion",
+            "Reserved",
+            "Closed / Sold",
+            "Archived",
+            "Rejected",
             "Contact Pending",
             "Contacted",
-            "Details Verified",
             "In Progress",
             "Converted",
             "Not Interested",
-            "Rejected",
-            "Archived"
         ]),
         note: z.string().optional(),
+    }),
+});
+
+export const updateAssistancePhoneSchema = z.object({
+    body: z.object({
+        assistance_phone: z.string().min(5, "Phone number is too short").max(50, "Phone number is too long"),
     }),
 });
 

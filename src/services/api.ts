@@ -7,7 +7,7 @@ import {
   FormVersion,
 } from '../types/panel';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5050/api/v1';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 export function getAuthToken(): string | null {
   return localStorage.getItem('propkart_panel_token');
@@ -82,6 +82,7 @@ export interface SubmissionsQuery {
   search?: string;
   status?: string;
   property_type?: string;
+  listing_type?: string;
   city?: string;
   assigned_to?: string;
   date_from?: string;
@@ -206,15 +207,120 @@ export async function createNewDraftVersion(formId: string, changelog?: string):
   });
 }
 
+export async function deleteSubmission(id: string): Promise<any> {
+  return request(`/admin/submissions/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function updateAssistancePhone(phone: string): Promise<any> {
+  return request('/admin/forms/assistance-phone', {
+    method: 'PATCH',
+    body: JSON.stringify({ assistance_phone: phone }),
+  });
+}
+
+export async function bulkDeleteSubmissions(ids: string[]): Promise<any> {
+  return request('/admin/submissions/bulk-delete', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function bulkUpdateSubmissionStatus(ids: string[], status: string): Promise<any> {
+  return request('/admin/submissions/bulk-status', {
+    method: 'PATCH',
+    body: JSON.stringify({ ids, status }),
+  });
+}
+
+export async function downloadExportZip(ids?: string[], customFilename?: string): Promise<void> {
+  const token = getAuthToken();
+  const query = ids && ids.length > 0 ? `?ids=${encodeURIComponent(ids.join(','))}` : '';
+  const res = await fetch(`${BASE_URL}/admin/submissions/export/zip${query}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to download ZIP archive');
+
+  let filename = customFilename;
+  if (!filename) {
+    const disposition = res.headers.get('content-disposition') || res.headers.get('Content-Disposition');
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '').trim();
+      }
+    }
+  }
+  if (!filename) {
+    if (ids && ids.length === 1) {
+      filename = `property_${ids[0]}_with_photos.zip`;
+    } else if (ids && ids.length > 1) {
+      filename = `propkart_selected_${ids.length}_properties_with_photos.zip`;
+    } else {
+      filename = `propkart_all_properties_with_photos_${Date.now()}.zip`;
+    }
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
+export async function downloadExportCsv(ids?: string[], customFilename?: string): Promise<void> {
+  const token = getAuthToken();
+  const query = ids && ids.length > 0 ? `?ids=${encodeURIComponent(ids.join(','))}` : '';
+  const res = await fetch(`${BASE_URL}/admin/submissions/export/csv${query}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) throw new Error('Failed to download CSV report');
+
+  let filename = customFilename;
+  if (!filename) {
+    const disposition = res.headers.get('content-disposition') || res.headers.get('Content-Disposition');
+    if (disposition && disposition.includes('filename=')) {
+      const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+      if (match && match[1]) {
+        filename = match[1].replace(/['"]/g, '').trim();
+      }
+    }
+  }
+  if (!filename) {
+    if (ids && ids.length === 1) {
+      filename = `property_${ids[0]}.csv`;
+    } else if (ids && ids.length > 1) {
+      filename = `propkart_selected_${ids.length}_properties.csv`;
+    } else {
+      filename = `propkart_all_properties_${Date.now()}.csv`;
+    }
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(url);
+}
+
 export async function fetchTelecallers(): Promise<User[]> {
   try {
-    const users = await request<User[]>('/users');
-    return users.filter((u) => u.role === 'Telecaller' || u.role === 'Admin' || u.role === 'Sales');
+    const users = await request<User[]>('/admin/users');
+    return (users || []).filter((u) => u.role === 'Telecaller' || u.role === 'Admin' || u.role === 'Sales');
   } catch (e) {
-    return [
-      { id: '1e61f4f9-6358-4572-9395-6a1ac8d0292b', email: 'telecaller@gmail.com', full_name: 'Telecaller 1', role: 'Telecaller' },
-      { id: '1696ca0e-151d-4a05-934a-77507c2b22d4', email: 'telecaller2@gmail.com', full_name: 'Telecaller 2', role: 'Telecaller' },
-      { id: 'a0a0da7e-c6ff-411c-9588-9ef3b6f2a679', email: 'jay@nbpropertytech.com', full_name: 'Soni Jaykumar', role: 'Admin' },
-    ];
+    return [];
   }
 }

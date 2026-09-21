@@ -104,30 +104,49 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
  * Handle new public submission
  */
 export async function submitRegistrationForm({ versionId, fields, media = [], ipAddress, userAgent }) {
-    // 1. Fetch form version to ensure it is published
-    const { data: version, error: verErr } = await supabase
+    // 1. Fetch form version to ensure it is published (resolves by versionId or formId fallback)
+    let version = null;
+    const { data: versionById } = await supabase
         .from("form_versions")
         .select("id, form_id, status")
         .eq("id", versionId)
-        .single();
+        .maybeSingle();
 
-    if (verErr || !version || version.status !== "published") {
+    if (versionById && versionById.status === "published") {
+        version = versionById;
+    } else {
+        const { data: versionByForm } = await supabase
+            .from("form_versions")
+            .select("id, form_id, status")
+            .eq("form_id", versionId)
+            .eq("status", "published")
+            .order("version_number", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        if (versionByForm) {
+            version = versionByForm;
+        }
+    }
+
+    if (!version || version.status !== "published") {
         throw new Error("This form version is not currently accepting submissions.");
     }
+
+    const actualVersionId = version.id;
 
     // 2. Fetch parent form to ensure active
     const { data: form } = await supabase
         .from("forms")
         .select("is_active")
         .eq("id", version.form_id)
-        .single();
+        .maybeSingle();
 
     if (!form || !form.is_active) {
         throw new Error("This form is currently inactive.");
     }
 
     // 3. Server-side validation
-    const { isValid, errors } = await validateSubmissionAgainstSchema(versionId, fields, media);
+    const { isValid, errors } = await validateSubmissionAgainstSchema(actualVersionId, fields, media);
     if (!isValid) {
         const error = new Error("Validation failed for form submission.");
         error.name = "ValidationError";
@@ -137,7 +156,7 @@ export async function submitRegistrationForm({ versionId, fields, media = [], ip
 
     // 4. Insert submission record
     const submission = await repo.createSubmissionRecord({
-        versionId,
+        versionId: actualVersionId,
         formId: version.form_id,
         fields,
         media,

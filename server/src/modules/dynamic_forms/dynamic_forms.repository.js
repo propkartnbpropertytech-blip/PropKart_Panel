@@ -1,4 +1,71 @@
+import fs from "fs";
+import path from "path";
+import { ZipArchive } from "archiver";
 import supabase from "../../config/supabase.js";
+import { encryptString, decryptString, encryptJson, decryptJson } from "../../security/encryption.js";
+
+/**
+ * Decrypts a submission record transparently for authorized consumption
+ */
+export function decryptSubmission(sub) {
+    if (!sub) return sub;
+    const decryptedRaw = decryptJson(sub.raw_data) || {};
+
+    // Auto-resolve listing_type and property_type from dynamic form fields if not directly indexed
+    let listingType = sub.listing_type;
+    if (!listingType && decryptedRaw) {
+        listingType = decryptedRaw.property_for_rent_or_sale ||
+            decryptedRaw.listing_type ||
+            decryptedRaw.rent_or_sale ||
+            decryptedRaw.purpose ||
+            null;
+    }
+
+    let propertyType = sub.property_type;
+    if (!propertyType && decryptedRaw) {
+        propertyType = decryptedRaw.property_type ||
+            decryptedRaw.property_type_select ||
+            null;
+    }
+
+    return {
+        ...sub,
+        owner_name: decryptString(sub.owner_name),
+        owner_phone: decryptString(sub.owner_phone),
+        owner_email: decryptString(sub.owner_email),
+        address: decryptString(sub.address),
+        location_url: decryptString(sub.location_url),
+        direction_url: decryptString(sub.direction_url),
+        listing_type: listingType,
+        property_type: propertyType,
+        raw_data: decryptedRaw,
+    };
+}
+
+/**
+ * Locates uploaded media file on local disk across possible upload paths
+ */
+export function findMediaDiskPath(m) {
+    if (!m) return null;
+    const filename = path.basename(m.storage_path || m.public_url || "");
+    if (!filename) return null;
+    const rawPath = (m.storage_path || "").replace(/\\/g, "/");
+
+    const candidatePaths = [
+        path.join(process.cwd(), "public", "uploads", "submissions", filename),
+        path.join(process.cwd(), "public", "uploads", "submissions", "photos", filename),
+        path.join(process.cwd(), "public", "uploads", "submissions", "videos", filename),
+        path.join(process.cwd(), "public", "uploads", filename),
+        path.join(process.cwd(), "public", "uploads", rawPath.replace(/^\/?uploads\//, "")),
+        path.join(process.cwd(), "public", rawPath),
+        path.join(process.cwd(), "public", "uploads", rawPath),
+    ];
+
+    for (const p of candidatePaths) {
+        if (fs.existsSync(p)) return p;
+    }
+    return null;
+}
 
 /**
  * Fetch the currently published active form schema by slug
@@ -8,7 +75,7 @@ export async function getActiveFormBySlug(slug = "property-registration") {
     const { data: form, error: formErr } = await supabase
         .from("forms")
         .select(`
-            id, slug, title, description, is_active, current_version_id,
+            id, slug, title, description, is_active, current_version_id, assistance_phone,
             form_versions!fk_forms_current_version (
                 id, version_number, status, published_at
             )
@@ -61,6 +128,7 @@ export async function getActiveFormBySlug(slug = "property-registration") {
         slug: form.slug,
         title: form.title,
         description: form.description,
+        assistance_phone: form.assistance_phone || "+91 98980 12345",
         version: {
             id: form.form_versions.id,
             version_number: form.form_versions.version_number,
@@ -162,8 +230,8 @@ export async function createSubmissionRecord({
     let ownerName = fields.owner_name || fields.owner_full_name || fields.full_name || fields.name || null;
     let ownerPhone = fields.owner_phone || fields.mobile_number || fields.mobile || fields.phone || fields.contact || null;
     let ownerEmail = fields.owner_email || fields.email || null;
-    let propertyType = fields.property_type || null;
-    let listingType = fields.listing_type || null;
+    let propertyType = fields.property_type || fields.property_type_select || null;
+    let listingType = fields.listing_type || fields.property_for_rent_or_sale || fields.rent_or_sale || fields.purpose || null;
     let city = fields.city || null;
     let area = fields.area || fields.locality || fields.locality_area || null;
     let address = fields.address || fields.property_address || fields.society_name || null;
@@ -176,8 +244,8 @@ export async function createSubmissionRecord({
         if (!ownerName && (lk.includes("name") || lk.includes("owner"))) ownerName = String(v);
         if (!ownerPhone && (lk.includes("phone") || lk.includes("mobile") || lk.includes("contact"))) ownerPhone = String(v);
         if (!ownerEmail && lk.includes("email")) ownerEmail = String(v);
-        if (!propertyType && lk.includes("property_type")) propertyType = String(v);
-        if (!listingType && lk.includes("listing")) listingType = String(v);
+        if (!propertyType && (lk.includes("property_type") || lk.includes("propertytype"))) propertyType = String(v);
+        if (!listingType && (lk.includes("listing") || lk.includes("rent") || lk.includes("sale") || lk.includes("resale"))) listingType = String(v);
         if (!city && lk.includes("city")) city = String(v);
         if (!area && (lk.includes("area") || lk.includes("locality"))) area = String(v);
         if (!address && (lk.includes("address") || lk.includes("society"))) address = String(v);
@@ -203,19 +271,19 @@ export async function createSubmissionRecord({
         form_id: formId,
         version_id: versionId,
         status: "New",
-        owner_name: ownerName,
-        owner_phone: ownerPhone,
-        owner_email: ownerEmail,
+        owner_name: encryptString(ownerName),
+        owner_phone: encryptString(ownerPhone),
+        owner_email: encryptString(ownerEmail),
         property_type: propertyType,
         listing_type: listingType,
         city: city,
         area: area,
-        address: address,
-        location_url: locationUrl,
-        direction_url: directionUrl,
+        address: encryptString(address),
+        location_url: encryptString(locationUrl),
+        direction_url: encryptString(directionUrl),
         latitude: latitude ? Number(latitude) : null,
         longitude: longitude ? Number(longitude) : null,
-        raw_data: fields,
+        raw_data: encryptJson(fields),
         ip_address: ipAddress,
         user_agent: userAgent,
     };
@@ -277,10 +345,12 @@ export async function getSubmissions({
     search = "",
     status = "",
     property_type = "",
+    listing_type = "",
     city = "",
     assigned_to = "",
     date_from = "",
     date_to = "",
+    ids = "",
     sort_by = "created_at",
     sort_dir = "desc",
 }) {
@@ -291,15 +361,23 @@ export async function getSubmissions({
         .select(`
             id, registration_code, form_id, version_id, status, assigned_to,
             owner_name, owner_phone, owner_email, property_type, listing_type,
-            city, area, address, location_url, direction_url,
+            city, area, address, location_url, direction_url, raw_data,
             created_at, updated_at,
             assigned_user:users!form_submissions_assigned_to_fkey(id, full_name, email),
-            media:submission_media(id, media_type, public_url)
+            media:submission_media(id, media_type, public_url, original_name, storage_path)
         `, { count: "exact" });
 
+    if (ids) {
+        const idArr = Array.isArray(ids)
+            ? ids.map((x) => String(x).trim()).filter(Boolean)
+            : decodeURIComponent(String(ids)).split(",").map((x) => x.trim()).filter(Boolean);
+        if (idArr.length > 0) {
+            query = query.in("id", idArr);
+        }
+    }
+
     if (search) {
-        // ILIKE search across multiple indexed fields
-        query = query.or(`owner_name.ilike.%${search}%,owner_phone.ilike.%${search}%,owner_email.ilike.%${search}%,registration_code.ilike.%${search}%,address.ilike.%${search}%,city.ilike.%${search}%`);
+        query = query.or(`registration_code.ilike.%${search}%,city.ilike.%${search}%,area.ilike.%${search}%,property_type.ilike.%${search}%,owner_name.ilike.%${search}%`);
     }
 
     if (status) {
@@ -307,6 +385,11 @@ export async function getSubmissions({
     }
     if (property_type) {
         query = query.eq("property_type", property_type);
+    }
+    if (listing_type && listing_type !== "All") {
+        const cleanLt = listing_type.trim();
+        const altLt = cleanLt.toLowerCase().includes("sale") ? "sale" : cleanLt;
+        query = query.or(`listing_type.ilike.%${cleanLt}%,listing_type.ilike.%${altLt}%,raw_data->>property_for_rent_or_sale.ilike.%${cleanLt}%,raw_data->>listing_type.ilike.%${cleanLt}%`);
     }
     if (city) {
         query = query.eq("city", city);
@@ -332,8 +415,34 @@ export async function getSubmissions({
     const { data, count, error } = await query;
     if (error) throw error;
 
+    let decryptedList = (data || []).map(decryptSubmission);
+
+    // Filter by listing_type in decrypted rows (supports "Rent", "Re-sale", "Resale", etc.)
+    if (listing_type && listing_type !== "All") {
+        const target = listing_type.toLowerCase().replace(/[^a-z0-9]/g, "");
+        decryptedList = decryptedList.filter((item) => {
+            const itemLt = (item.listing_type || item.raw_data?.property_for_rent_or_sale || item.raw_data?.listing_type || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+            return itemLt.includes(target) || target.includes(itemLt);
+        });
+    }
+
+    // If search term was provided, also ensure decrypted fields match
+    if (search && search.trim()) {
+        const s = search.toLowerCase().trim();
+        decryptedList = decryptedList.filter((item) =>
+            (item.registration_code && item.registration_code.toLowerCase().includes(s)) ||
+            (item.owner_name && item.owner_name.toLowerCase().includes(s)) ||
+            (item.owner_phone && item.owner_phone.includes(s)) ||
+            (item.city && item.city.toLowerCase().includes(s)) ||
+            (item.area && item.area.toLowerCase().includes(s)) ||
+            (item.address && item.address.toLowerCase().includes(s)) ||
+            (item.property_type && item.property_type.toLowerCase().includes(s)) ||
+            (item.listing_type && item.listing_type.toLowerCase().includes(s))
+        );
+    }
+
     return {
-        submissions: data || [],
+        submissions: decryptedList,
         pagination: {
             total: count || 0,
             page: Number(page),
@@ -390,7 +499,7 @@ export async function getSubmissionDetailById(id) {
         .order("created_at", { ascending: false });
 
     return {
-        submission,
+        submission: decryptSubmission(submission),
         schema,
         media: media || [],
         notes: notes || [],
@@ -505,19 +614,20 @@ export async function updateSubmissionData(id, newFields, currentUserId) {
         .eq("id", id)
         .single();
 
-    const mergedData = { ...(current?.raw_data || {}), ...newFields };
+    const currentDecrypted = decryptJson(current?.raw_data || {});
+    const mergedData = { ...currentDecrypted, ...newFields };
 
     // Update indexed columns if touched
-    const updates = { raw_data: mergedData };
-    if (newFields.owner_name) updates.owner_name = newFields.owner_name;
-    if (newFields.owner_phone) updates.owner_phone = newFields.owner_phone;
-    if (newFields.owner_email) updates.owner_email = newFields.owner_email;
+    const updates = { raw_data: encryptJson(mergedData) };
+    if (newFields.owner_name) updates.owner_name = encryptString(newFields.owner_name);
+    if (newFields.owner_phone) updates.owner_phone = encryptString(newFields.owner_phone);
+    if (newFields.owner_email) updates.owner_email = encryptString(newFields.owner_email);
     if (newFields.property_type) updates.property_type = newFields.property_type;
     if (newFields.listing_type) updates.listing_type = newFields.listing_type;
     if (newFields.city) updates.city = newFields.city;
     if (newFields.area) updates.area = newFields.area;
-    if (newFields.address) updates.address = newFields.address;
-    if (newFields.direction) updates.direction_url = newFields.direction;
+    if (newFields.address) updates.address = encryptString(newFields.address);
+    if (newFields.direction) updates.direction_url = encryptString(newFields.direction);
 
     const { data: updated, error } = await supabase
         .from("form_submissions")
@@ -536,7 +646,7 @@ export async function updateSubmissionData(id, newFields, currentUserId) {
         changes: { updated_fields: Object.keys(newFields) },
     });
 
-    return updated;
+    return decryptSubmission(updated);
 }
 
 /**
@@ -915,3 +1025,343 @@ export async function createDraftVersion(formId, userId, changelog = "New draft 
 
     return newVersion;
 }
+
+/**
+ * Permanently delete a submission record and its physical media files
+ */
+export async function deleteSubmissionRecord(id, userId) {
+    // 1. Fetch media to clean up disk storage
+    const { data: mediaItems } = await supabase
+        .from("submission_media")
+        .select("*")
+        .eq("submission_id", id);
+
+    if (mediaItems && mediaItems.length > 0) {
+        for (const m of mediaItems) {
+            const diskPath = findMediaDiskPath(m);
+            if (diskPath && fs.existsSync(diskPath)) {
+                try {
+                    fs.unlinkSync(diskPath);
+                } catch (e) {
+                    console.warn(`Could not remove file ${diskPath}:`, e.message);
+                }
+            }
+        }
+    }
+
+    // 2. Delete submission from PostgreSQL (cascades to media, notes, and audit logs)
+    const { data: deleted, error } = await supabase
+        .from("form_submissions")
+        .delete()
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return deleted;
+}
+
+/**
+ * Permanently delete multiple property submissions and cascade physical media
+ */
+export async function bulkDeleteSubmissions(ids, userId) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return { count: 0 };
+
+    // 1. Fetch physical media to clean from local uploads disk
+    const { data: mediaItems } = await supabase
+        .from("submission_media")
+        .select("*")
+        .in("submission_id", ids);
+
+    for (const m of mediaItems || []) {
+        const diskPath = findMediaDiskPath(m);
+        if (diskPath && fs.existsSync(diskPath)) {
+            try {
+                fs.unlinkSync(diskPath);
+            } catch (e) {
+                console.warn(`Could not remove file ${diskPath}:`, e.message);
+            }
+        }
+    }
+
+    // 2. Cascade delete from PostgreSQL
+    const { data: deleted, error } = await supabase
+        .from("form_submissions")
+        .delete()
+        .in("id", ids)
+        .select("id");
+
+    if (error) throw error;
+    return { count: deleted?.length || 0 };
+}
+
+/**
+ * Bulk update lifecycle status for multiple submissions
+ */
+export async function bulkUpdateSubmissionStatus(ids, status, userId) {
+    if (!ids || !Array.isArray(ids) || ids.length === 0) return { count: 0 };
+
+    const { data: updated, error } = await supabase
+        .from("form_submissions")
+        .update({ status, updated_at: new Date().toISOString() })
+        .in("id", ids)
+        .select("id, status");
+
+    if (error) throw error;
+    return { count: updated?.length || 0 };
+}
+
+/**
+ * Update the header assistance phone number in forms table
+ */
+export async function updateAssistancePhone(phone, slug = "property-registration") {
+    const cleanPhone = String(phone).trim();
+    const { data, error } = await supabase
+        .from("forms")
+        .update({ assistance_phone: cleanPhone })
+        .eq("slug", slug)
+        .select("id, slug, title, assistance_phone")
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * Stream a complete ZIP archive containing the CSV spreadsheet report and all photos
+ * Supports 3 scopes:
+ * - Individual: Single property ZIP with property_<code_or_id>_report.csv and photos/
+ * - Selected: Multiple selected properties ZIP with selected_properties_report.csv and <code>/photos/
+ * - All Data: Full property pool ZIP with all_properties_report.csv and <code>/photos/
+ */
+export async function exportSubmissionsZipStream(res, query = {}) {
+    // 1. Fetch matching submissions (supports single id, selected ids, or all)
+    const { submissions } = await getSubmissions({ ...query, limit: 2000 });
+
+    const archive = new ZipArchive({ zlib: { level: 9 } });
+
+    if (!submissions || submissions.length === 0) {
+        res.attachment("propkart_empty_export.zip");
+        archive.pipe(res);
+        archive.append("No matching submissions found for export.\r\n", { name: "empty.txt" });
+        await archive.finalize();
+        return;
+    }
+
+    // 2. Fetch all media for these submissions
+    const subIds = submissions.map((s) => s.id);
+    const mediaMap = {};
+    if (subIds.length > 0) {
+        const { data: allMedia } = await supabase
+            .from("submission_media")
+            .select("*")
+            .in("submission_id", subIds);
+        (allMedia || []).forEach((m) => {
+            if (!mediaMap[m.submission_id]) mediaMap[m.submission_id] = [];
+            mediaMap[m.submission_id].push(m);
+        });
+    }
+
+    // 3. Build CSV spreadsheet
+    const csvHeaders = [
+        "Registration Code",
+        "Inflow Date",
+        "Owner Name",
+        "Mobile Number",
+        "Email Address",
+        "Property Type",
+        "Listing Type",
+        "City",
+        "Area",
+        "Address",
+        "Status",
+        "Expected Price",
+        "Built-up Area",
+        "BHK",
+        "Furnishing",
+        "Google Location",
+        "Remarks",
+        "Photos Count",
+        "Photos List",
+    ];
+
+    const csvRows = submissions.map((s) => {
+        const raw = s.raw_data || {};
+        const mediaList = mediaMap[s.id] || [];
+        const photoNames = mediaList.map((m) => m.original_name || path.basename(m.storage_path || "")).join("; ");
+
+        const row = [
+            s.registration_code || "",
+            s.created_at ? new Date(s.created_at).toLocaleString("en-IN") : "",
+            s.owner_name || "",
+            s.owner_phone || "",
+            s.owner_email || "",
+            s.property_type || "",
+            s.listing_type || "",
+            s.city || "",
+            s.area || "",
+            (s.address || "").replace(/\r?\n/g, " "),
+            s.status || "",
+            raw.expected_price || "",
+            raw.built_up_area || "",
+            raw.bhk || "",
+            raw.furnishing || "",
+            s.location_url || (typeof raw.google_location === "string" ? raw.google_location : raw.google_location?.url) || "",
+            (raw.remarks || "").replace(/\r?\n/g, " "),
+            mediaList.length,
+            photoNames,
+        ];
+
+        return row.map((val) => `"${String(val || "").replace(/"/g, '""')}"`).join(",");
+    });
+
+    const csvContent = [csvHeaders.join(","), ...csvRows].join("\r\n");
+
+    // 4. Determine archive filename based on scope
+    const isSingle = submissions.length === 1;
+    const isSelected = Boolean(query.ids) && submissions.length > 1;
+    let archiveFileName = "";
+    let csvFileNameInside = "";
+
+    if (isSingle) {
+        const code = submissions[0].registration_code || "property";
+        archiveFileName = `property_${code}_with_photos.zip`;
+        csvFileNameInside = `property_${code}_report.csv`;
+    } else if (isSelected) {
+        archiveFileName = `propkart_selected_${submissions.length}_properties_with_photos.zip`;
+        csvFileNameInside = `selected_properties_report.csv`;
+    } else {
+        archiveFileName = `propkart_all_properties_with_photos_${Date.now()}.zip`;
+        csvFileNameInside = `all_properties_report.csv`;
+    }
+
+    res.attachment(archiveFileName);
+    archive.pipe(res);
+
+    // Append CSV report file
+    archive.append(csvContent, { name: csvFileNameInside });
+
+    // Append photo files from local disk
+    for (const s of submissions) {
+        const code = s.registration_code || s.id;
+        const mediaList = mediaMap[s.id] || [];
+        for (let idx = 0; idx < mediaList.length; idx++) {
+            const m = mediaList[idx];
+            const diskPath = findMediaDiskPath(m);
+            if (diskPath && fs.existsSync(diskPath)) {
+                const ext = path.extname(diskPath) || ".jpg";
+                const base = path.basename(m.original_name || diskPath, ext).replace(/[^a-zA-Z0-9._-]/g, "_");
+                const safeName = `${String(idx + 1).padStart(2, "0")}_${base}${ext}`;
+
+                if (isSingle) {
+                    // Single property: directly under photos/
+                    archive.file(diskPath, { name: `photos/${safeName}` });
+                } else {
+                    // Multiple properties: under <registration_code>/photos/
+                    archive.file(diskPath, { name: `${code}/photos/${safeName}` });
+                }
+            }
+        }
+    }
+
+    await archive.finalize();
+}
+
+/**
+ * Generate and send CSV data spreadsheet
+ * Supports 3 scopes:
+ * - Individual: Single property CSV named property_<code_or_id>.csv
+ * - Selected: Multiple selected CSV named propkart_selected_<count>_properties.csv
+ * - All Data: Full pool CSV named propkart_all_properties_<timestamp>.csv
+ */
+export async function exportSubmissionsCsv(res, query = {}) {
+    const { submissions } = await getSubmissions({ ...query, limit: 2000 });
+
+    if (!submissions || submissions.length === 0) {
+        res.setHeader("Content-Type", "text/csv; charset=utf-8");
+        res.attachment("propkart_empty_report.csv");
+        return res.send("Registration Code,Inflow Date,Owner Name,Status\r\n");
+    }
+
+    const isSingle = submissions.length === 1;
+    const isSelected = Boolean(query.ids) && submissions.length > 1;
+    let csvFileName = "";
+
+    if (isSingle) {
+        const code = submissions[0].registration_code || "property";
+        csvFileName = `property_${code}.csv`;
+    } else if (isSelected) {
+        csvFileName = `propkart_selected_${submissions.length}_properties.csv`;
+    } else {
+        csvFileName = `propkart_all_properties_${Date.now()}.csv`;
+    }
+
+    const csvHeaders = [
+        "Registration Code",
+        "Inflow Date",
+        "Owner Name",
+        "Mobile Number",
+        "Email Address",
+        "Property Type",
+        "Listing Type",
+        "City",
+        "Area",
+        "Address",
+        "Status",
+        "Expected Price",
+        "Built-up Area",
+        "BHK",
+        "Furnishing",
+        "Google Location",
+        "Remarks",
+    ];
+
+    const csvRows = submissions.map((s) => {
+        const raw = s.raw_data || {};
+        const row = [
+            s.registration_code || "",
+            s.created_at ? new Date(s.created_at).toLocaleString("en-IN") : "",
+            s.owner_name || "",
+            s.owner_phone || "",
+            s.owner_email || "",
+            s.property_type || "",
+            s.listing_type || "",
+            s.city || "",
+            s.area || "",
+            (s.address || "").replace(/\r?\n/g, " "),
+            s.status || "",
+            raw.expected_price || "",
+            raw.built_up_area || "",
+            raw.bhk || "",
+            raw.furnishing || "",
+            s.location_url || (typeof raw.google_location === "string" ? raw.google_location : raw.google_location?.url) || "",
+            (raw.remarks || "").replace(/\r?\n/g, " "),
+        ];
+
+        return row.map((val) => `"${String(val || "").replace(/"/g, '""')}"`).join(",");
+    });
+
+    const csvContent = [csvHeaders.join(","), ...csvRows].join("\r\n");
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.attachment(csvFileName);
+    return res.send(csvContent);
+}
+
+export async function getActiveUsers() {
+    const { data: users, error } = await supabase
+        .from("users")
+        .select("id, email, full_name, mobile, roles(name)")
+        .eq("is_active", true);
+
+    if (error) throw error;
+
+    return (users || []).map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name,
+        mobile: u.mobile,
+        role: u.roles?.name || "Admin",
+    }));
+}
+

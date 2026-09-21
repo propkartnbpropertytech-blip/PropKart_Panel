@@ -199,7 +199,7 @@ export const FormBuilder: React.FC = () => {
     setSaving(true);
     try {
       await saveActiveFormFieldsDirect(fields);
-      showFeedback('success', 'Form fields saved successfully! Connect form is updated.');
+      showFeedback('success', 'Form fields saved successfully! Connect portal is updated.');
     } catch (err: any) {
       console.error('Save failed:', err);
       showFeedback('error', err.message || 'Failed to save form fields.');

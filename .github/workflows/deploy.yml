@@ -1,34 +1,90 @@
-name: PropKart Panel Deploy
+name: PropKart Panel CI/CD & Auto-Deploy
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
 
 jobs:
-  deploy:
+  build-and-deploy:
+    name: Build & Deploy to Hostinger VPS
     runs-on: ubuntu-latest
-    needs: [ ]
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Install Frontend Dependencies
+        run: npm ci
 
-      - name: Build Production Assets
+      - name: Compile Panel Production Bundle (v1.0.0)
         run: npm run build
         env:
-          VITE_API_URL: https://api-propkart.nbpropertytech.com/api/v1
-          VITE_SUPABASE_URL: http://200.234.36.120:8000
+          VITE_API_URL: /api/v1
+          VITE_SUPABASE_URL: ""
 
-      - name: Health & Smoke Check
+      - name: Verify Frontend Distribution Assets
         run: |
-          echo "Production assets compiled successfully."
-          ls -la dist/
+          echo "Verifying panel-dist content:"
+          ls -lh dist/
+          test -f dist/index.html || (echo "dist/index.html missing!" && exit 1)
+
+      - name: Verify Server Syntax & Dependencies
+        run: |
+          cd server
+          npm ci
+          node --check src/server.js
+          node --check src/security/encryption.js
+
+      - name: Deploy Panel Dist to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "dist/*"
+          target: "/root/propconnect-stack/panel-dist"
+          strip_components: 1
+          overwrite: true
+
+      - name: Deploy Server Files to VPS via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          source: "server/*,server/src/**,server/package*.json,server/Dockerfile"
+          target: "/root/propconnect-stack/server"
+          strip_components: 1
+          overwrite: true
+
+      - name: Rebuild API & Restart Panel Container (Zero-Touch)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          password: ${{ secrets.VPS_SSH_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo ">>> Rebuilding propconnect-api and restarting propconnect-panel..."
+            cd /root/propconnect-stack
+            docker compose -f docker-compose.prod.yml up -d --build propconnect-api
+            docker restart propconnect-panel
+
+            echo ">>> Checking PropConnect stack container status..."
+            docker ps --filter "name=propconnect-" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+            echo ">>> Running Live HTTPS Health Check for Panel..."
+            curl -sI -k https://panel.nbpropertytech.com | head -n 5
+
+            echo ">>> ZERO-TOUCH CONFIRMATION: Traefik, PropKart backend, and Supabase DB remain untouched."

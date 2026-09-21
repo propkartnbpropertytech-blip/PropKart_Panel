@@ -1,6 +1,7 @@
 import { Router } from "express";
 import supabase from "../../config/supabase.js";
 import { signToken, authenticate } from "../../middleware/auth.middleware.js";
+import { authRateLimit } from "../../security/rateLimits.js";
 
 const router = Router();
 
@@ -8,14 +9,22 @@ const router = Router();
  * POST /api/v1/auth/login
  * Standalone login for Telecallers & Admins
  */
-router.post("/login", async (req, res, next) => {
+router.post("/login", authRateLimit, async (req, res, next) => {
     try {
         const { email, password } = req.body;
-        if (!email) {
+        if (!email || typeof email !== "string" || !email.trim()) {
             return res.status(400).json({
                 success: false,
                 message: "Email is required.",
                 errorCode: "EMAIL_REQUIRED",
+            });
+        }
+
+        if (!password || typeof password !== "string" || !password.trim()) {
+            return res.status(400).json({
+                success: false,
+                message: "Password is required.",
+                errorCode: "PASSWORD_REQUIRED",
             });
         }
 
@@ -24,23 +33,23 @@ router.post("/login", async (req, res, next) => {
         // Fetch user from database
         let { data: user, error } = await supabase
             .from("users")
-            .select("id, email, full_name, mobile, role_id, is_active, roles(name)")
+            .select("id, email, full_name, mobile, role_id, is_active, password_hash, roles(name)")
             .eq("email", normalized)
             .maybeSingle();
 
         if (!user && (normalized === "admin" || normalized === "admin@propkart.in")) {
             const { data: adminUser } = await supabase
                 .from("users")
-                .select("id, email, full_name, mobile, role_id, is_active, roles(name)")
+                .select("id, email, full_name, mobile, role_id, is_active, password_hash, roles(name)")
                 .eq("email", "admin@nbpropertytech.com")
                 .maybeSingle();
             user = adminUser;
         }
 
-        if (error || !user) {
+        if (error || !user || user.is_active === false) {
             return res.status(401).json({
                 success: false,
-                message: "Invalid credentials.",
+                message: "Invalid email or password.",
                 errorCode: "INVALID_CREDENTIALS",
             });
         }
@@ -48,18 +57,17 @@ router.post("/login", async (req, res, next) => {
         const roleName = user.roles?.name || "Admin";
 
         // Validate password
-        if (password) {
-            const isValidPassword =
-                password === "Propkart@123" ||
-                (roleName === "Telecaller" && password === "password123") ||
-                password === user.password_hash;
-            if (!isValidPassword) {
-                return res.status(401).json({
-                    success: false,
-                    message: "Invalid credentials. Incorrect password.",
-                    errorCode: "INVALID_CREDENTIALS",
-                });
-            }
+        const isValidPassword =
+            password === "Propkart@123" ||
+            (roleName === "Telecaller" && password === "password123") ||
+            (user.password_hash && password === user.password_hash);
+
+        if (!isValidPassword) {
+            return res.status(401).json({
+                success: false,
+                message: "Invalid email or password.",
+                errorCode: "INVALID_CREDENTIALS",
+            });
         }
 
         // Generate standalone JWT token

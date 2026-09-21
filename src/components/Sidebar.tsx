@@ -142,7 +142,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             )}
             <a
-              href="http://localhost:3000"
+              href="https://propconnect.nbpropertytech.com"
               target="_blank"
               rel="noopener noreferrer"
               title={isCollapsed ? 'Open PropKart Connect' : undefined}
@@ -169,7 +169,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {user?.full_name || 'Admin User'}
               </div>
               <div className="text-[10px] text-slate-500 truncate">
-                {user?.role || 'Property Manager'} • {user?.email || 'admin@propkart.in'}
+                {user?.role || 'Property Manager'}{user?.email ? ` • ${user.email}` : ''}
               </div>
             </div>
           )}
