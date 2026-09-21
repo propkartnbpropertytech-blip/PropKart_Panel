@@ -28,14 +28,46 @@ export function decryptSubmission(sub) {
             null;
     }
 
+    let locationUrl = decryptString(sub.location_url);
+    if (!locationUrl || locationUrl === "N/A" || locationUrl === "null") {
+        const rawMaps = decryptedRaw.google_maps_location || decryptedRaw.google_location || decryptedRaw.location_url;
+        if (rawMaps) {
+            locationUrl = typeof rawMaps === "object" ? (rawMaps.url || rawMaps.location_url) : String(rawMaps);
+        }
+    }
+
+    let directionUrl = decryptString(sub.direction_url);
+    if (!directionUrl || directionUrl === "N/A" || directionUrl === "null") {
+        directionUrl = decryptedRaw.direction___landmarks || decryptedRaw.direction || decryptedRaw.direction_landmarks || null;
+    }
+
+    let area = sub.area && sub.area !== "null" ? sub.area : null;
+    if (!area && decryptedRaw) {
+        area = decryptedRaw.area || decryptedRaw.areas || decryptedRaw.locality || decryptedRaw.locality_area || null;
+    }
+
+    let city = sub.city && sub.city !== "null" ? sub.city : null;
+    if (!city && decryptedRaw) {
+        city = decryptedRaw.city || null;
+        const addr = String(decryptedRaw.property_address || decryptedRaw.address || "").toLowerCase();
+        if (!city && addr.includes("ahmedabad")) city = "Ahmedabad";
+        else if (!city && addr.includes("surat")) city = "Surat";
+        else if (!city && (addr.includes("vadodara") || addr.includes("baroda"))) city = "Vadodara";
+        else if (!city && addr.includes("rajkot")) city = "Rajkot";
+        else if (!city && addr.includes("gandhinagar")) city = "Gandhinagar";
+        if (!city && (area === "Gota" || area === "Ramdev nagar" || addr.includes("gujarat"))) city = "Ahmedabad";
+    }
+
     return {
         ...sub,
         owner_name: decryptString(sub.owner_name),
         owner_phone: decryptString(sub.owner_phone),
         owner_email: decryptString(sub.owner_email),
-        address: decryptString(sub.address),
-        location_url: decryptString(sub.location_url),
-        direction_url: decryptString(sub.direction_url),
+        address: decryptString(sub.address) || decryptedRaw.property_address || null,
+        city: city,
+        area: area,
+        location_url: locationUrl,
+        direction_url: directionUrl,
         listing_type: listingType,
         property_type: propertyType,
         raw_data: decryptedRaw,
@@ -233,7 +265,7 @@ export async function createSubmissionRecord({
     let propertyType = fields.property_type || fields.property_type_select || null;
     let listingType = fields.listing_type || fields.property_for_rent_or_sale || fields.rent_or_sale || fields.purpose || null;
     let city = fields.city || null;
-    let area = fields.area || fields.locality || fields.locality_area || null;
+    let area = fields.area || fields.areas || fields.locality || fields.locality_area || null;
     let address = fields.address || fields.property_address || fields.society_name || null;
     let directionUrl = fields.direction || fields.direction_landmarks || fields.direction_url || null;
 
@@ -252,17 +284,28 @@ export async function createSubmissionRecord({
         if (!directionUrl && (lk.includes("direction") || lk.includes("landmark"))) directionUrl = String(v);
     }
 
+    if (!city && address) {
+        const addrLower = String(address).toLowerCase();
+        if (addrLower.includes("ahmedabad")) city = "Ahmedabad";
+        else if (addrLower.includes("surat")) city = "Surat";
+        else if (addrLower.includes("vadodara") || addrLower.includes("baroda")) city = "Vadodara";
+        else if (addrLower.includes("rajkot")) city = "Rajkot";
+        else if (addrLower.includes("gandhinagar")) city = "Gandhinagar";
+    }
+    if (!city && area) city = "Ahmedabad";
+
     let locationUrl = null;
     let latitude = null;
     let longitude = null;
 
-    if (fields.google_location) {
-        if (typeof fields.google_location === "object") {
-            locationUrl = fields.google_location.url || fields.google_location.location_url || null;
-            latitude = fields.google_location.lat || fields.google_location.latitude || null;
-            longitude = fields.google_location.lng || fields.google_location.longitude || null;
-        } else if (typeof fields.google_location === "string") {
-            locationUrl = fields.google_location;
+    const mapsField = fields.google_maps_location || fields.google_location || fields.location_url || fields.maps_link;
+    if (mapsField) {
+        if (typeof mapsField === "object") {
+            locationUrl = mapsField.url || mapsField.location_url || null;
+            latitude = mapsField.lat || mapsField.latitude || null;
+            longitude = mapsField.lng || mapsField.longitude || null;
+        } else if (typeof mapsField === "string") {
+            locationUrl = mapsField;
         }
     }
 
@@ -516,14 +559,88 @@ export async function getSubmissionByRegistrationCode(code) {
         .select(`
             id, registration_code, form_id, version_id, status,
             owner_name, owner_phone, owner_email, property_type, listing_type,
-            city, area, address, location_url, direction_url,
+            city, area, address, location_url, direction_url, raw_data,
             created_at
         `)
         .eq("registration_code", code.trim())
         .maybeSingle();
 
     if (error) throw error;
-    return data;
+    if (!data) return null;
+    return decryptSubmission(data);
+}
+
+/**
+ * Check if a mobile number is already registered in our database
+ */
+export async function isPhoneAlreadyRegistered(phone) {
+    if (!phone) return false;
+    const cleanDigits = String(phone).replace(/\D/g, "").slice(-10);
+    if (cleanDigits.length < 10) return false;
+
+    // Fetch submissions to inspect phone numbers
+    const { data, error } = await supabase
+        .from("form_submissions")
+        .select("id, owner_phone, raw_data");
+
+    if (error || !data) return false;
+
+    for (const sub of data) {
+        const decryptedPhone = decryptString(sub.owner_phone);
+        if (decryptedPhone) {
+            const digits = String(decryptedPhone).replace(/\D/g, "").slice(-10);
+            if (digits === cleanDigits) return true;
+        }
+
+        const raw = decryptJson(sub.raw_data);
+        if (raw) {
+            const rawPhone = raw.mobile_number || raw.phone || raw.owner_phone || raw.mobile || raw.contact;
+            if (rawPhone) {
+                const digits = String(rawPhone).replace(/\D/g, "").slice(-10);
+                if (digits === cleanDigits) return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Public Property Showcase data for propconnect.nbpropertytech.com
+ */
+export async function getPublicPropertyShowcase(code) {
+    if (!code) return null;
+    const sub = await getSubmissionByRegistrationCode(code);
+    if (!sub) return null;
+
+    const raw = sub.raw_data || {};
+
+    const { data: media } = await supabase
+        .from("submission_media")
+        .select("id, media_type, storage_path, public_url, original_name, display_order")
+        .eq("submission_id", sub.id)
+        .order("display_order", { ascending: true });
+
+    return {
+        registration_code: sub.registration_code,
+        created_at: sub.created_at,
+        property_type: sub.property_type || "Residential",
+        listing_type: sub.listing_type || "Sale",
+        city: sub.city || "Surat",
+        area: sub.area || "",
+        address: sub.address || "",
+        direction: sub.direction_url || raw.direction___landmarks || raw.direction || "",
+        location_url: sub.location_url || (typeof raw.google_maps_location === 'object' ? raw.google_maps_location.url : raw.google_maps_location) || "",
+        expected_price: raw.expected_price ? Number(raw.expected_price) : null,
+        photos: (media || [])
+            .filter((m) => m.media_type === "photo" || m.storage_path?.match(/\.(jpg|jpeg|png|webp|avif)$/i))
+            .map((m) => ({
+                id: m.id,
+                url: m.public_url,
+                storage_path: m.storage_path,
+            })),
+        status: sub.status,
+    };
 }
 
 /**

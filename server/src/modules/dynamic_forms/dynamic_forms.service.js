@@ -17,6 +17,19 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
         throw new Error("Unable to retrieve form fields for validation.");
     }
 
+    // Fetch assistance phone to prevent collision
+    let assistanceDigits = "9879458308";
+    try {
+        const { data: vData } = await supabase
+            .from("form_versions")
+            .select("form_id, forms:forms(assistance_phone)")
+            .eq("id", versionId)
+            .maybeSingle();
+        if (vData?.forms?.assistance_phone) {
+            assistanceDigits = String(vData.forms.assistance_phone).replace(/\D/g, "").slice(-10);
+        }
+    } catch (_) {}
+
     const validationErrors = {};
 
     for (const field of formFields) {
@@ -46,9 +59,11 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
 
         // 2. Type-specific validations
         if (field.field_type === "phone") {
-            const cleanPhone = String(val).replace(/\D/g, "");
-            if (cleanPhone.length < 10) {
+            const cleanPhone = String(val).replace(/\D/g, "").slice(-10);
+            if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
                 validationErrors[field.field_key] = "Please enter a valid 10-digit mobile number.";
+            } else if (cleanPhone === assistanceDigits) {
+                validationErrors[field.field_key] = `Mobile number cannot be the same as the PropKart assistance number (${assistanceDigits}). Please enter your personal mobile number.`;
             }
         } else if (field.field_type === "email") {
             if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val).trim())) {
@@ -64,6 +79,15 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
                 }
                 if (rules.max_value !== undefined && num > rules.max_value) {
                     validationErrors[field.field_key] = `${field.label} cannot exceed ${rules.max_value}.`;
+                }
+                // Rent Cap Validation: Cannot exceed 10 Lakhs (1,000,000)
+                if (field.field_key === "expected_price" || field.field_key.includes("rent")) {
+                    const purpose = String(fields.property_for_rent_or_sale || fields.listing_type || "").trim().toLowerCase();
+                    if (purpose === "rent" || purpose.includes("rent")) {
+                        if (num > 1000000) {
+                            validationErrors[field.field_key] = "Expected rent cannot exceed ₹10,00,000 (10 Lakhs). Please enter a valid rent amount.";
+                        }
+                    }
                 }
             }
         } else if (["text", "textarea", "name", "direction"].includes(field.field_type)) {
@@ -159,7 +183,21 @@ export async function submitRegistrationForm({ versionId, fields, media = [], ip
         throw error;
     }
 
-    // 4. Insert submission record
+    // 4. Duplicate mobile check
+    const phoneVal = fields.mobile_number || fields.owner_phone || fields.phone || fields.contact;
+    if (phoneVal) {
+        const isDuplicate = await repo.isPhoneAlreadyRegistered(phoneVal);
+        if (isDuplicate) {
+            const error = new Error("This mobile number is already registered in our system. Duplicate submissions are not allowed.");
+            error.name = "ValidationError";
+            error.fields = {
+                mobile_number: "This mobile number is already registered in our system. Duplicate submissions are not allowed.",
+            };
+            throw error;
+        }
+    }
+
+    // 5. Insert submission record
     const submission = await repo.createSubmissionRecord({
         versionId: actualVersionId,
         formId: version.form_id,

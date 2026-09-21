@@ -13,6 +13,7 @@ import {
 } from '../services/api';
 import { MediaGalleryViewer } from '../components/MediaGalleryViewer';
 import { WhatsAppModal } from '../components/WhatsAppModal';
+import { ShareModal } from '../components/ShareModal';
 import {
   ArrowLeft,
   Phone,
@@ -80,6 +81,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
   const [submittingNote, setSubmittingNote] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isEditingData, setIsEditingData] = useState(false);
   const [editFormData, setEditFormData] = useState<Record<string, any>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -211,18 +213,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
   };
 
   const handleShareSummary = () => {
-    if (!data) return;
-    const sub = data.submission;
-    const raw = sub.raw_data || {};
-    const summary = `🏡 PropKart Property Listing (${sub.registration_code})
-• Type: ${sub.property_type || 'Residential'} (${sub.listing_type || 'Sale'})
-• Location: ${sub.address || sub.area || ''}, ${sub.city || ''}
-• Expected Price: ₹${raw.expected_price ? Number(raw.expected_price).toLocaleString('en-IN') : 'N/A'}
-• Built-up Area: ${raw.built_up_area || 'N/A'} sq. ft (${raw.bhk || ''})
-• Owner: ${sub.owner_name} (+91 ${sub.owner_phone})
-• Maps: ${sub.location_url || 'N/A'}`;
-
-    handleCopy(summary, 'Property Summary');
+    setIsShareModalOpen(true);
   };
 
   if (loading || !data) {
@@ -498,7 +489,8 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
 
                   // Handle Google Location
                   if (f.field_type === 'google_location') {
-                    const locUrl = typeof val === 'object' ? (val.url || val.location_url) : val;
+                    const rawLoc = typeof val === 'object' ? (val.url || val.location_url) : val;
+                    const locUrl = rawLoc || (submission.location_url !== 'N/A' ? submission.location_url : null);
                     const isValidMaps = locUrl && /^https:\/\/(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(locUrl).trim());
                     return (
                       <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-[#f5f5f7]/80 border border-black/[0.04] space-y-2">
@@ -864,6 +856,17 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           submission={submission}
           isOpen={true}
           onClose={() => setIsWhatsAppOpen(false)}
+        />
+      )}
+
+      {/* 3-Way Share Suite Modal */}
+      {isShareModalOpen && (
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          submission={submission}
+          media={media}
+          onShowToast={showToast}
         />
       )}
     </div>

@@ -128,6 +128,53 @@ export async function verifyRegistrationCode(req, res, next) {
     }
 }
 
+/**
+ * GET /api/v1/form-submissions/check-phone?phone=...
+ * Check if a mobile number is already registered
+ */
+export async function checkPhoneDuplicate(req, res, next) {
+    try {
+        const { phone } = req.query;
+        if (!phone) {
+            return res.status(200).json({ success: true, exists: false });
+        }
+        const exists = await repo.isPhoneAlreadyRegistered(phone);
+        return res.status(200).json({
+            success: true,
+            exists,
+            message: exists
+                ? "This mobile number is already registered in our system."
+                : "Mobile number is available.",
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/v1/form-submissions/public-property/:code
+ * Public Property Showcase view for propconnect.nbpropertytech.com
+ */
+export async function getPublicPropertyShowcase(req, res, next) {
+    try {
+        const { code } = req.params;
+        const property = await repo.getPublicPropertyShowcase(code);
+        if (!property) {
+            return res.status(404).json({
+                success: false,
+                message: "Property not found.",
+                errorCode: "NOT_FOUND",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            data: property,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
 // ==========================================
 // ADMIN / PANEL CONTROLLERS (PropKart Panel)
 // ==========================================

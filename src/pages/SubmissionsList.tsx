@@ -1051,7 +1051,14 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                         })()}
                       </td>
                       <td className="py-3.5 px-3 text-slate-600 truncate max-w-[150px]">
-                        {sub.area ? `${sub.area}, ${sub.city}` : sub.city || 'Gujarat'}
+                        {(() => {
+                          const a = sub.area && sub.area !== 'null' ? sub.area.trim() : '';
+                          const c = sub.city && sub.city !== 'null' ? sub.city.trim() : '';
+                          if (a && c) return `${a}, ${c}`;
+                          if (a) return a;
+                          if (c) return c;
+                          return 'Gujarat';
+                        })()}
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <span
@@ -1272,8 +1279,16 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                     </div>
                     <div>
                       <div className="text-[10px] uppercase font-semibold text-slate-400">Property</div>
-                      <div className="font-semibold text-slate-900 truncate">{sub.property_type || 'Property'}</div>
-                      <div className="text-slate-500 truncate">{sub.city || 'Gujarat'}</div>
+                      <div className="text-slate-500 truncate">
+                        {(() => {
+                          const a = sub.area && sub.area !== 'null' ? sub.area.trim() : '';
+                          const c = sub.city && sub.city !== 'null' ? sub.city.trim() : '';
+                          if (a && c) return `${a}, ${c}`;
+                          if (a) return a;
+                          if (c) return c;
+                          return 'Gujarat';
+                        })()}
+                      </div>
                     </div>
                   </div>
 

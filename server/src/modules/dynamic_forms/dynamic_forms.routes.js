@@ -42,6 +42,12 @@ router.post(
 // Verify registration code
 router.get("/form-submissions/verify/:code", controller.verifyRegistrationCode);
 
+// Check if mobile number is duplicate
+router.get("/form-submissions/check-phone", controller.checkPhoneDuplicate);
+
+// Public Property Showcase
+router.get("/form-submissions/public-property/:code", controller.getPublicPropertyShowcase);
+
 // ==========================================
 // ADMIN / PANEL ROUTES (PropKart Panel)
 // Protected by JWT and RBAC
