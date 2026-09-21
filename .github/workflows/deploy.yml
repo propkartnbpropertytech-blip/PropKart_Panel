@@ -41,6 +41,8 @@ jobs:
           npm ci
           node --check src/server.js
           node --check src/security/encryption.js
+          # Remove runner node_modules so scp only transfers source files (Docker rebuilds inside container)
+          rm -rf node_modules
 
       - name: Deploy Panel & Server to VPS (Native OpenSSH)
         env:
@@ -55,34 +57,58 @@ jobs:
           TARGET_USER="${VPS_USERNAME:-root}"
           TARGET_PORT="${VPS_PORT:-22}"
 
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          ssh-keyscan -p "$TARGET_PORT" -H "$TARGET_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
 
           if [ -n "$VPS_SSH_KEY" ]; then
-            echo ">>> Authenticating with dedicated OpenSSH deployment key..."
-            echo "$VPS_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-            chmod 600 ~/.ssh/deploy_key
-            SSH_CMD="ssh -i ~/.ssh/deploy_key -p $TARGET_PORT -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST"
-            SCP_CMD="scp -i ~/.ssh/deploy_key -P $TARGET_PORT -o StrictHostKeyChecking=no"
+            echo ">>> Configuring dedicated OpenSSH deployment key..."
+            printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+            chmod 600 "$HOME/.ssh/deploy_key"
+
+            {
+              echo "Host vps-target"
+              echo "  HostName $TARGET_HOST"
+              echo "  User $TARGET_USER"
+              echo "  Port $TARGET_PORT"
+              echo "  IdentityFile $HOME/.ssh/deploy_key"
+              echo "  StrictHostKeyChecking no"
+              echo "  UserKnownHostsFile /dev/null"
+            } > "$HOME/.ssh/config"
+            chmod 600 "$HOME/.ssh/config"
+
+            echo ">>> Testing SSH authentication with VPS..."
+            ssh vps-target "echo '>>> SSH authentication successful!'"
+
+            echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
+            scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
+
+            echo ">>> Transferring server to /root/propconnect-stack/server..."
+            scp -r server/* vps-target:/root/propconnect-stack/server/
+
+            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
+            ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
+
           elif [ -n "$VPS_PASSWORD" ]; then
-            echo ">>> Authenticating with SSH password..."
+            echo ">>> Configuring SSH password authentication..."
             sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-            SSH_CMD="sshpass -p '$VPS_PASSWORD' ssh -p $TARGET_PORT -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST"
-            SCP_CMD="sshpass -p '$VPS_PASSWORD' scp -P $TARGET_PORT -o StrictHostKeyChecking=no"
+            export SSHPASS="$VPS_PASSWORD"
+
+            echo ">>> Testing SSH authentication with VPS..."
+            sshpass -e ssh -p "$TARGET_PORT" -o StrictHostKeyChecking=no "$TARGET_USER@$TARGET_HOST" "echo '>>> SSH authentication successful!'"
+
+            echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
+            sshpass -e scp -P "$TARGET_PORT" -o StrictHostKeyChecking=no -r dist/* "$TARGET_USER@$TARGET_HOST:/root/propconnect-stack/panel-dist/"
+
+            echo ">>> Transferring server to /root/propconnect-stack/server..."
+            sshpass -e scp -P "$TARGET_PORT" -o StrictHostKeyChecking=no -r server/* "$TARGET_USER@$TARGET_HOST:/root/propconnect-stack/server/"
+
+            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
+            sshpass -e ssh -p "$TARGET_PORT" -o StrictHostKeyChecking=no "$TARGET_USER@$TARGET_HOST" "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
+
           else
             echo "::error::No SSH credentials configured! Please add VPS_SSH_KEY or VPS_SSH_PASSWORD in GitHub Repository Settings -> Secrets and variables -> Actions."
             echo "Refer to repository README.md for the step-by-step secret setup guide."
             exit 1
           fi
-
-          echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
-          $SCP_CMD -r dist/* $TARGET_USER@$TARGET_HOST:/root/propconnect-stack/panel-dist/
-
-          echo ">>> Transferring server to /root/propconnect-stack/server..."
-          $SCP_CMD -r server/* $TARGET_USER@$TARGET_HOST:/root/propconnect-stack/server/
-
-          echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
-          $SSH_CMD "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
 
           echo ">>> SUCCESS: PropKart Panel deployed to https://panel.nbpropertytech.com!"
