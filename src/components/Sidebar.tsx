@@ -61,9 +61,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             {!isCollapsed && (
               <div className="min-w-0 transition-opacity duration-200">
-                <div className="font-display font-bold text-sm tracking-tight text-slate-900 flex items-center gap-1">
+                <div className="font-display font-bold text-sm tracking-tight text-slate-900 flex items-center gap-1.5">
                   <span>PropKart</span>
                   <span className="text-brand-600 font-semibold">Panel</span>
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200/80">v1.0.0</span>
                 </div>
                 <div className="text-[10px] text-slate-500 font-medium truncate">Property Pool Desk</div>
               </div>

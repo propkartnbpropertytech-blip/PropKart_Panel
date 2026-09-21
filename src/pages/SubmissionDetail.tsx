@@ -502,13 +502,22 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   // Handle Google Location
                   if (f.field_type === 'google_location') {
                     const locUrl = typeof val === 'object' ? (val.url || val.location_url) : val;
+                    const isValidMaps = locUrl && /^https:\/\/(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(locUrl).trim());
                     return (
                       <div key={f.field_key} className="md:col-span-2 p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
-                        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                          {f.label}
+                        <div className="flex items-center justify-between">
+                          <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                            {f.label}
+                          </div>
+                          {locUrl && !isValidMaps && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span>Non-Google Maps Link</span>
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="text-xs text-slate-900 font-mono truncate max-w-md">
+                          <div className="text-xs text-slate-900 font-mono break-all leading-relaxed">
                             {locUrl || 'No Google location link provided'}
                           </div>
                           {locUrl && (
@@ -520,15 +529,28 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                               >
                                 <Copy className="w-3.5 h-3.5" />
                               </button>
-                              <a
-                                href={locUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold"
-                              >
-                                <MapPin className="w-3.5 h-3.5" />
-                                <span>Open Maps</span>
-                              </a>
+                              {isValidMaps ? (
+                                <a
+                                  href={locUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-xs"
+                                >
+                                  <MapPin className="w-3.5 h-3.5" />
+                                  <span>Open Maps</span>
+                                </a>
+                              ) : (
+                                <a
+                                  href={locUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold shadow-xs"
+                                  title="Open External Link"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                  <span>Open Link</span>
+                                </a>
+                              )}
                             </div>
                           )}
                         </div>
@@ -545,7 +567,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                           {f.label}
                         </div>
                         <div className="flex items-center justify-between gap-3">
-                          <span className="text-xs text-slate-900 leading-relaxed">{val || 'N/A'}</span>
+                          <span className="text-xs text-slate-900 leading-relaxed break-words">{val || 'N/A'}</span>
                           {isLink && (
                             <a
                               href={String(val)}
@@ -589,16 +611,31 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                   }
 
                   // Regular Text / Number / Phone / Currency fields
+                  const isAddressOrLong =
+                    f.field_type === 'textarea' ||
+                    f.field_key.toLowerCase().includes('address') ||
+                    f.label.toLowerCase().includes('address') ||
+                    f.field_key.toLowerCase().includes('landmark') ||
+                    f.field_key.toLowerCase().includes('direction') ||
+                    (val && String(val).length > 40);
+
+                  // Clean leading/trailing quotes if present from JSON
+                  const cleanVal = val !== undefined && val !== null
+                    ? String(val).replace(/^"+|"+$/g, '').trim()
+                    : '';
+
                   return (
                     <div
                       key={f.field_key}
-                      className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1"
+                      className={`p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5 ${
+                        isAddressOrLong ? 'md:col-span-2' : ''
+                      }`}
                     >
                       <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider flex items-center justify-between">
                         <span className="truncate">{f.label}</span>
-                        {val && (
+                        {cleanVal && (
                           <button
-                            onClick={() => handleCopy(String(val), f.label)}
+                            onClick={() => handleCopy(cleanVal, f.label)}
                             className="text-slate-400 hover:text-slate-700 p-0.5 shrink-0"
                             title={`Copy ${f.label}`}
                           >
@@ -606,12 +643,16 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
                           </button>
                         )}
                       </div>
-                      <div className="text-xs font-semibold text-slate-900 truncate">
+                      <div
+                        className={`text-xs font-semibold text-slate-900 ${
+                          isAddressOrLong ? 'break-words whitespace-pre-wrap leading-relaxed' : 'break-words'
+                        }`}
+                      >
                         {f.field_type === 'currency' && val
                           ? `₹ ${Number(val).toLocaleString('en-IN')}`
                           : f.field_type === 'area' && val
                           ? `${val} sq. ft`
-                          : String(val || '—')}
+                          : cleanVal || '—'}
                       </div>
                     </div>
                   );
@@ -635,16 +676,32 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
               <div className="bg-white border border-slate-200 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Additional Submitted Fields</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {remainingKeys.map((k) => (
-                    <div key={k} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
-                      <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate">
-                        {k.replace(/_/g, ' ')}
+                  {remainingKeys.map((k) => {
+                    const rawVal = raw[k];
+                    const cleanStr = typeof rawVal === 'object'
+                      ? JSON.stringify(rawVal)
+                      : String(rawVal || '').replace(/^"+|"+$/g, '').trim();
+                    const isLong = cleanStr.length > 40 || k.toLowerCase().includes('address');
+                    return (
+                      <div
+                        key={k}
+                        className={`p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1.5 ${
+                          isLong ? 'md:col-span-2' : ''
+                        }`}
+                      >
+                        <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                          {k.replace(/_/g, ' ')}
+                        </div>
+                        <div
+                          className={`text-xs font-semibold text-slate-900 ${
+                            isLong ? 'break-words whitespace-pre-wrap leading-relaxed' : 'break-words'
+                          }`}
+                        >
+                          {cleanStr || '—'}
+                        </div>
                       </div>
-                      <div className="text-xs font-semibold text-slate-900 truncate">
-                        {typeof raw[k] === 'object' ? JSON.stringify(raw[k]) : String(raw[k] || '—')}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );

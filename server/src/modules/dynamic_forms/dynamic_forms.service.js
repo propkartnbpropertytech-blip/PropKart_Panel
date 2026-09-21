@@ -75,10 +75,15 @@ export async function validateSubmissionAgainstSchema(versionId, fields, media =
                 validationErrors[field.field_key] = `${field.label} cannot exceed ${rules.max_length} characters.`;
             }
         } else if (field.field_type === "google_location") {
-            let locUrl = typeof val === "object" ? (val.url || val.location_url) : val;
+            const locUrl = typeof val === "object" ? (val.url || val.location_url) : val;
             const hasCoords = typeof val === "object" && val.lat && val.lng;
-            if (rules.url_required && !hasCoords && (!locUrl || !String(locUrl).startsWith("http"))) {
-                validationErrors[field.field_key] = "Please provide a valid Google Maps link or pin your location.";
+            if (locUrl) {
+                const isMaps = /^https:\/\/(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(String(locUrl).trim());
+                if (!isMaps) {
+                    validationErrors[field.field_key] = "Only official Google Maps links (e.g. https://maps.app.goo.gl/... or https://maps.google.com/...) are accepted.";
+                }
+            } else if (field.is_required && !hasCoords) {
+                validationErrors[field.field_key] = "Please provide a valid Google Maps link or capture GPS coordinates.";
             }
         }
     }
