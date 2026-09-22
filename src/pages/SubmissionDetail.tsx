@@ -865,6 +865,7 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           isOpen={isShareModalOpen}
           onClose={() => setIsShareModalOpen(false)}
           submission={submission}
+          schema={data?.schema}
           media={media}
           onShowToast={showToast}
         />

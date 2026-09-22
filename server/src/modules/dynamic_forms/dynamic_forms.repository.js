@@ -613,7 +613,75 @@ export async function getPublicPropertyShowcase(code) {
     const sub = await getSubmissionByRegistrationCode(code);
     if (!sub) return null;
 
-    const raw = sub.raw_data || {};
+    const decrypted = decryptSubmission(sub);
+    const raw = decrypted.raw_data || {};
+
+    // Fetch form version schema to accurately resolve active fields
+    let schema = null;
+    if (sub.version_id) {
+        try {
+            schema = await getFormVersionSchema(sub.version_id);
+        } catch (_) {}
+    }
+
+    const activeFields = (schema?.sections || [])
+        .flatMap((sec) => (sec.fields || []).map((f) => ({ ...f, section_title: sec.title })))
+        .filter((f) => f.is_active !== false);
+
+    const activeKeys = new Set(activeFields.map((f) => f.field_key));
+
+    // Dynamic fields to return: only active fields with present, non-empty values
+    const dynamicFields = [];
+    const internalKeys = new Set([
+        "photos", "videos", "consent", "declaration", "terms", "owner_declaration",
+        "owner_phone", "mobile_number", "phone", "owner_email", "email",
+        "expected_price", "property_address", "address",
+    ]);
+
+    if (activeFields.length > 0) {
+        for (const f of activeFields) {
+            if (internalKeys.has(f.field_key)) continue;
+            const val = raw[f.field_key];
+            if (val !== undefined && val !== null && val !== "" && val !== "null" && val !== "N/A") {
+                let cleanVal = val;
+                if (f.field_type === "google_location" && typeof val === "object") {
+                    cleanVal = val.url || val.location_url || val.address || "";
+                }
+                dynamicFields.push({
+                    key: f.field_key,
+                    label: f.label,
+                    value: cleanVal,
+                    type: f.field_type,
+                    section: f.section_title,
+                });
+            }
+        }
+    } else {
+        for (const [k, v] of Object.entries(raw)) {
+            if (internalKeys.has(k) || !v || v === "null" || v === "N/A") continue;
+            dynamicFields.push({
+                key: k,
+                label: k.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                value: v,
+                type: "text",
+            });
+        }
+    }
+
+    // Direction/Landmark: ONLY if field is active in schema and has non-empty value
+    const hasDirectionField = activeKeys.size === 0 ||
+        activeKeys.has("direction___landmarks") ||
+        activeKeys.has("direction") ||
+        activeKeys.has("direction_landmarks") ||
+        activeKeys.has("landmark");
+
+    let directionVal = null;
+    if (hasDirectionField) {
+        const rawDir = raw.direction___landmarks || raw.direction || raw.direction_landmarks || raw.landmark || decrypted.direction_url;
+        if (rawDir && rawDir !== "null" && rawDir !== "N/A" && String(rawDir).trim().length > 0) {
+            directionVal = String(rawDir).trim();
+        }
+    }
 
     const { data: media } = await supabase
         .from("submission_media")
@@ -624,14 +692,15 @@ export async function getPublicPropertyShowcase(code) {
     return {
         registration_code: sub.registration_code,
         created_at: sub.created_at,
-        property_type: sub.property_type || "Residential",
-        listing_type: sub.listing_type || "Sale",
-        city: sub.city || "Surat",
-        area: sub.area || "",
-        address: sub.address || "",
-        direction: sub.direction_url || raw.direction___landmarks || raw.direction || "",
-        location_url: sub.location_url || (typeof raw.google_maps_location === 'object' ? raw.google_maps_location.url : raw.google_maps_location) || "",
+        property_type: decrypted.property_type || "Residential",
+        listing_type: decrypted.listing_type || "Sale",
+        city: decrypted.city || "Ahmedabad",
+        area: decrypted.area || "",
+        address: decrypted.address || "",
+        direction: directionVal,
+        location_url: decrypted.location_url || (typeof raw.google_maps_location === "object" ? raw.google_maps_location.url : raw.google_maps_location) || "",
         expected_price: raw.expected_price ? Number(raw.expected_price) : null,
+        dynamic_fields: dynamicFields,
         photos: (media || [])
             .filter((m) => m.media_type === "photo" || m.storage_path?.match(/\.(jpg|jpeg|png|webp|avif)$/i))
             .map((m) => ({

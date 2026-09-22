@@ -21,6 +21,7 @@ interface ShareModalProps {
   isOpen: boolean;
   onClose: () => void;
   submission: any;
+  schema?: any;
   media: any[];
   onShowToast: (msg: string) => void;
 }
@@ -29,6 +30,7 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   isOpen,
   onClose,
   submission,
+  schema,
   media = [],
   onShowToast,
 }) => {
@@ -43,20 +45,60 @@ export const ShareModal: React.FC<ShareModalProps> = ({
   const raw = submission.raw_data || {};
   const isRent = String(submission.listing_type || '').toLowerCase() === 'rent';
 
-  // Fix Google Maps Link: check submission.location_url, then raw.google_maps_location, raw.google_location, etc.
-  const rawMaps = raw.google_maps_location || raw.google_location || raw.location_url;
-  const mapsUrl =
-    submission.location_url && submission.location_url !== 'N/A' && submission.location_url !== 'null'
-      ? submission.location_url
-      : typeof rawMaps === 'object'
-      ? rawMaps?.url || rawMaps?.location_url || ''
-      : String(rawMaps || '');
+  // Extract active fields from schema to guarantee dynamic behavior
+  const activeFields = (schema?.sections || [])
+    .flatMap((sec: any) => (sec.fields || []).map((f: any) => ({ ...f, section_title: sec.title })))
+    .filter((f: any) => f.is_active !== false);
 
-  const directionLandmark =
-    submission.direction_url || raw.direction___landmarks || raw.direction || raw.direction_landmarks || '';
+  const activeKeys = new Set(activeFields.map((f: any) => f.field_key));
+
+  // Determine if landmark field is actively defined in the schema
+  const hasLandmarkInSchema = activeKeys.size === 0 ||
+    activeKeys.has('direction___landmarks') ||
+    activeKeys.has('direction') ||
+    activeKeys.has('direction_landmarks') ||
+    activeKeys.has('landmark');
+
+  const rawLandmark = raw.direction___landmarks || raw.direction || raw.direction_landmarks || raw.landmark || submission.direction_url;
+  const directionLandmark = (hasLandmarkInSchema && rawLandmark && rawLandmark !== 'N/A' && rawLandmark !== 'null' && String(rawLandmark).trim().length > 0)
+    ? String(rawLandmark).trim()
+    : '';
+
+  // Collect other dynamic specs from active schema
+  const dynamicSpecs: Array<{ key: string; label: string; value: string }> = activeFields.filter((f: any) => {
+    if ([
+      'photos', 'videos', 'consent', 'declaration', 'terms', 'owner_declaration',
+      'owner_phone', 'mobile_number', 'phone', 'owner_email', 'email',
+      'expected_price', 'property_address', 'address', 'google_maps_location',
+      'google_location', 'location_url', 'direction___landmarks', 'direction', 'landmark',
+      'direction_landmarks', 'property_for_rent_or_sale', 'listing_type', 'property_type', 'property_type_select'
+    ].includes(f.field_key)) return false;
+
+    const val = raw[f.field_key];
+    return val !== undefined && val !== null && val !== '' && val !== 'null' && val !== 'N/A';
+  }).map((f: any) => ({
+    key: f.field_key,
+    label: f.label,
+    value: typeof raw[f.field_key] === 'object' ? JSON.stringify(raw[f.field_key]) : String(raw[f.field_key]),
+  }));
+
+  // Fix Google Maps Link
+  const hasMapsInSchema = activeKeys.size === 0 ||
+    activeKeys.has('google_maps_location') ||
+    activeKeys.has('google_location') ||
+    activeKeys.has('location_url');
+
+  const rawMaps = raw.google_maps_location || raw.google_location || raw.location_url;
+  const mapsUrl = (hasMapsInSchema)
+    ? (submission.location_url && submission.location_url !== 'N/A' && submission.location_url !== 'null'
+        ? submission.location_url
+        : typeof rawMaps === 'object'
+        ? rawMaps?.url || rawMaps?.location_url || ''
+        : String(rawMaps || ''))
+    : '';
 
   const photos = (media || []).filter(
-    (m) => m.media_type === 'photo' || m.storage_path?.match(/\.(jpg|jpeg|png|webp|avif)$/i)
+    (m: any) => m.media_type === 'photo' || m.storage_path?.match(/\.(jpg|jpeg|png|webp|avif)$/i)
   );
 
   const publicShowcaseUrl = `https://propconnect.nbpropertytech.com/?view=${encodeURIComponent(
@@ -67,21 +109,33 @@ export const ShareModal: React.FC<ShareModalProps> = ({
     ? `₹${Number(raw.expected_price).toLocaleString('en-IN')}${isRent ? ' / month' : ''}`
     : 'Price on Request';
 
-  // WhatsApp formatted text
+  // WhatsApp formatted text with dynamic fields
   const getWhatsAppMessage = () => {
-    let msg = `🏡 *PropKart Verified Property* (${submission.registration_code})
-• *Type:* ${submission.property_type || 'Residential'} (${submission.listing_type || 'Sale'})
-• *Price:* ${formattedPrice}
-• *Location:* ${submission.address || submission.area || ''}, ${submission.city || 'Surat'}
-${directionLandmark ? `• *Landmark:* ${directionLandmark}\n` : ''}${mapsUrl ? `• *Google Maps:* ${mapsUrl}\n` : ''}`;
+    let msg = `🏡 *PropKart Verified Property* (${submission.registration_code})\n` +
+      `• *Type:* ${submission.property_type || 'Residential'} (${submission.listing_type || 'Sale'})\n` +
+      `• *Price:* ${formattedPrice}\n` +
+      `• *Location:* ${submission.address || submission.area || ''}, ${submission.city || 'Ahmedabad'}\n`;
+
+    if (directionLandmark) {
+      msg += `• *Landmark:* ${directionLandmark}\n`;
+    }
+
+    // Dynamic highlights (BHK, Built-up area, Furnishing, etc.)
+    dynamicSpecs.slice(0, 4).forEach((s: { key: string; label: string; value: string }) => {
+      msg += `• *${s.label}:* ${s.value}\n`;
+    });
+
+    if (mapsUrl) {
+      msg += `• *Google Maps:* ${mapsUrl}\n`;
+    }
 
     if (includeOwnerContact && submission.owner_name) {
       msg += `• *Owner:* ${submission.owner_name} (+91 ${submission.owner_phone || ''})\n`;
     }
 
-    msg += `• *Photos:* ${photos.length} verified photos available
-🔗 *View Full Property Showcase:*
-${publicShowcaseUrl}`;
+    msg += `• *Photos:* ${photos.length} verified photos available\n` +
+      `🔗 *View Full Property Showcase:*\n` +
+      `${publicShowcaseUrl}`;
 
     return msg;
   };
@@ -296,11 +350,56 @@ ${publicShowcaseUrl}`;
             </div>
           )}
 
-          {/* TAB 3: PROPER PDF DOSSIER */}
+          {/* TAB 3: PROPER MULTI-PAGE PDF DOSSIER */}
           {activeTab === 'pdf' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-700">Dossier Sheet Preview:</span>
+              <style>{`
+                @media print {
+                  @page {
+                    size: A4 portrait;
+                    margin: 10mm 12mm 12mm 12mm;
+                  }
+                  html, body {
+                    background: white !important;
+                    color: #111827 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                  }
+                  body * {
+                    visibility: hidden !important;
+                  }
+                  #printable-property-dossier, #printable-property-dossier * {
+                    visibility: visible !important;
+                  }
+                  #printable-property-dossier {
+                    position: absolute !important;
+                    left: 0 !important;
+                    top: 0 !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    background: white !important;
+                  }
+                  .pdf-avoid-break {
+                    break-inside: avoid !important;
+                    page-break-inside: avoid !important;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                }
+              `}</style>
+
+              <div className="flex items-center justify-between no-print">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-700">Dossier Sheet Preview:</span>
+                  <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border">
+                    {photos.length} photos (Multi-page A4 ready)
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={handlePrintPdf}
@@ -311,99 +410,131 @@ ${publicShowcaseUrl}`;
                 </button>
               </div>
 
-              {/* Printable Dossier Sheet */}
-              <div
-                ref={printRef}
-                id="printable-property-dossier"
-                className="p-6 rounded-2xl bg-white border border-black/[0.08] shadow-sm space-y-4 text-slate-900"
-              >
-                {/* Dossier Header */}
-                <div className="flex items-center justify-between border-b pb-3">
-                  <div>
-                    <h2 className="text-base font-bold tracking-tight text-slate-900">
-                      PropKart <span className="text-emerald-600">Property Dossier</span>
-                    </h2>
-                    <p className="text-[10px] text-slate-500">Verified Real Estate Registration</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-800 border">
-                      {submission.registration_code}
-                    </span>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {new Date(submission.created_at || Date.now()).toLocaleDateString('en-IN')}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Specs Grid */}
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border">
-                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">Purpose</span>
-                    <span className="font-semibold text-slate-800">
-                      {submission.listing_type || 'Sale'} ({submission.property_type || 'Residential'})
-                    </span>
+              {/* Scrollable Preview Wrapper */}
+              <div className="max-h-[62vh] overflow-y-auto pr-1">
+                {/* Printable Dossier Sheet */}
+                <div
+                  ref={printRef}
+                  id="printable-property-dossier"
+                  className="p-6 rounded-2xl bg-white border border-black/[0.08] shadow-sm space-y-4 text-slate-900"
+                >
+                  {/* Dossier Header */}
+                  <div className="flex items-center justify-between border-b pb-3 pdf-avoid-break">
+                    <div>
+                      <h2 className="text-base font-bold tracking-tight text-slate-900">
+                        PropKart <span className="text-emerald-600">Property Dossier</span>
+                      </h2>
+                      <p className="text-[10px] text-slate-500">Verified Real Estate Registration</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="inline-block px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-slate-100 text-slate-800 border">
+                        {submission.registration_code}
+                      </span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {new Date(submission.created_at || Date.now()).toLocaleDateString('en-IN')}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="p-2.5 rounded-xl bg-slate-50 border">
-                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">Expected Price</span>
-                    <span className="font-bold text-slate-900 font-mono">{formattedPrice}</span>
-                  </div>
+                  {/* Specs Grid */}
+                  <div className="grid grid-cols-2 gap-2.5 text-xs pdf-avoid-break">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border">
+                      <span className="block text-[10px] text-slate-400 uppercase font-semibold">Purpose</span>
+                      <span className="font-semibold text-slate-800">
+                        {submission.listing_type || 'Sale'} ({submission.property_type || 'Residential'})
+                      </span>
+                    </div>
 
-                  <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border">
-                    <span className="block text-[10px] text-slate-400 uppercase font-semibold">Address & Locality</span>
-                    <span className="text-slate-800">
-                      {submission.address || submission.area || ''}, {submission.city || 'Surat, Gujarat'}
-                    </span>
-                  </div>
+                    <div className="p-2.5 rounded-xl bg-slate-50 border">
+                      <span className="block text-[10px] text-slate-400 uppercase font-semibold">Expected Price</span>
+                      <span className="font-bold text-slate-900 font-mono">{formattedPrice}</span>
+                    </div>
 
-                  {directionLandmark && (
                     <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border">
-                      <span className="block text-[10px] text-slate-400 uppercase font-semibold">
-                        Direction & Landmark
+                      <span className="block text-[10px] text-slate-400 uppercase font-semibold">Address & Locality</span>
+                      <span className="text-slate-800">
+                        {submission.address || submission.area || ''}, {submission.city || 'Ahmedabad, Gujarat'}
                       </span>
-                      <span className="text-slate-800">{directionLandmark}</span>
                     </div>
-                  )}
 
-                  {mapsUrl && (
-                    <div className="col-span-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                      <span className="block text-[10px] text-emerald-800 uppercase font-semibold">
-                        Google Maps Location
-                      </span>
-                      <a
-                        href={mapsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 underline break-all font-mono text-[11px]"
-                      >
-                        {mapsUrl}
-                      </a>
-                    </div>
-                  )}
+                    {/* Direction & Landmark: ONLY if active in schema and has value */}
+                    {directionLandmark && (
+                      <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border">
+                        <span className="block text-[10px] text-slate-400 uppercase font-semibold">
+                          Direction & Landmark
+                        </span>
+                        <span className="text-slate-800">{directionLandmark}</span>
+                      </div>
+                    )}
 
-                  {submission.owner_name && (
-                    <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border">
-                      <span className="block text-[10px] text-slate-400 uppercase font-semibold">Owner Contact</span>
-                      <span className="text-slate-800 font-medium">
-                        {submission.owner_name} (+91 {submission.owner_phone})
-                      </span>
+                    {/* Dynamic Specs from Active Schema */}
+                    {dynamicSpecs.map((s: { key: string; label: string; value: string }) => (
+                      <div key={s.key} className="p-2.5 rounded-xl bg-slate-50 border">
+                        <span className="block text-[10px] text-slate-400 uppercase font-semibold">{s.label}</span>
+                        <span className="font-semibold text-slate-800 break-words">{s.value}</span>
+                      </div>
+                    ))}
+
+                    {mapsUrl && (
+                      <div className="col-span-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                        <span className="block text-[10px] text-emerald-800 uppercase font-semibold">
+                          Google Maps Location
+                        </span>
+                        <a
+                          href={mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-emerald-700 underline break-all font-mono text-[11px]"
+                        >
+                          {mapsUrl}
+                        </a>
+                      </div>
+                    )}
+
+                    {submission.owner_name && (
+                      <div className="col-span-2 p-2.5 rounded-xl bg-slate-50 border">
+                        <span className="block text-[10px] text-slate-400 uppercase font-semibold">Owner Contact</span>
+                        <span className="text-slate-800 font-medium">
+                          {submission.owner_name} (+91 {submission.owner_phone})
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Complete Photos Grid (All Uploaded Photos across PDF Pages) */}
+                  {photos.length > 0 && (
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-semibold text-slate-700">
+                          Property Photos ({photos.length} Verified Photos)
+                        </span>
+                        <span className="text-[10px] text-slate-400">All photos printed on dossier</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2.5">
+                        {photos.map((p, idx) => {
+                          const pUrl = p.public_url || p.url || (p.storage_path ? `/uploads/${p.storage_path}` : '');
+                          return (
+                            <div
+                              key={p.id || idx}
+                              className="pdf-avoid-break aspect-video rounded-xl overflow-hidden border border-slate-200 bg-slate-50 relative"
+                            >
+                              <img
+                                src={pUrl}
+                                alt={`Property Photo ${idx + 1}`}
+                                className="w-full h-full object-cover"
+                                loading="eager"
+                                crossOrigin="anonymous"
+                              />
+                              <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-mono">
+                                #{idx + 1}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
-
-                {/* Photos Grid in PDF */}
-                {photos.length > 0 && (
-                  <div className="space-y-2 pt-1 border-t">
-                    <span className="text-[11px] font-semibold text-slate-700">Property Photos ({photos.length})</span>
-                    <div className="grid grid-cols-3 gap-2">
-                      {photos.slice(0, 6).map((p, idx) => (
-                        <div key={p.id || idx} className="aspect-video rounded-lg overflow-hidden border bg-slate-100">
-                          <img src={p.public_url} alt="" className="w-full h-full object-cover" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}

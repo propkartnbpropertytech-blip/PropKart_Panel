@@ -53,62 +53,97 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           echo ">>> Initiating VPS deployment for PropKart Panel..."
-          TARGET_HOST="${VPS_HOST:-200.234.36.120}"
-          TARGET_USER="${VPS_USERNAME:-root}"
-          TARGET_PORT="${VPS_PORT:-22}"
+
+          # Validate required host configuration
+          if [ -z "$VPS_HOST" ]; then
+            echo "::error::Missing required secret 'VPS_HOST'. Please configure it in GitHub Repository Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          # Sanitize inputs: remove \r, \n, quotes, leading/trailing whitespace, protocols
+          TARGET_HOST=$(printf '%s' "$VPS_HOST" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's#^https\?://##' -e 's#/.*$##' -e 's/:[0-9]*$//')
+          TARGET_PORT=$(printf '%s' "${VPS_PORT:-22}" | tr -dc '0-9')
+          [ -z "$TARGET_PORT" ] && TARGET_PORT="22"
+          TARGET_USER=$(printf '%s' "${VPS_USERNAME:-root}" | tr -d '\r\n"' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          [ -z "$TARGET_USER" ] && TARGET_USER="root"
+
+          echo "Target Host configured (length: ${#TARGET_HOST}), User: $TARGET_USER, Port: $TARGET_PORT"
 
           mkdir -p "$HOME/.ssh"
           chmod 700 "$HOME/.ssh"
 
+          write_ssh_config() {
+            local h="$1"
+            local p="$2"
+            local u="$3"
+            {
+              echo "Host vps-target"
+              echo "  HostName $h"
+              echo "  User $u"
+              echo "  Port $p"
+              [ -f "$HOME/.ssh/deploy_key" ] && echo "  IdentityFile $HOME/.ssh/deploy_key"
+              echo "  StrictHostKeyChecking no"
+              echo "  UserKnownHostsFile /dev/null"
+              echo "  ConnectTimeout 15"
+              echo "  ServerAliveInterval 30"
+              echo "  ServerAliveCountMax 3"
+            } > "$HOME/.ssh/config"
+            chmod 600 "$HOME/.ssh/config"
+          }
+
+          AUTH_SUCCESS=false
+
+          # 1. Try OpenSSH Deployment Key
           if [ -n "$VPS_SSH_KEY" ]; then
             echo ">>> Configuring dedicated OpenSSH deployment key..."
             printf '%s\n' "$VPS_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
             chmod 600 "$HOME/.ssh/deploy_key"
 
-            {
-              echo "Host vps-target"
-              echo "  HostName $TARGET_HOST"
-              echo "  User $TARGET_USER"
-              echo "  Port $TARGET_PORT"
-              echo "  IdentityFile $HOME/.ssh/deploy_key"
-              echo "  StrictHostKeyChecking no"
-              echo "  UserKnownHostsFile /dev/null"
-            } > "$HOME/.ssh/config"
-            chmod 600 "$HOME/.ssh/config"
+            write_ssh_config "$TARGET_HOST" "$TARGET_PORT" "$TARGET_USER"
 
-            echo ">>> Testing SSH authentication with VPS..."
-            ssh vps-target "echo '>>> SSH authentication successful!'"
+            echo ">>> Testing SSH key authentication..."
+            if ssh -o BatchMode=yes vps-target "echo '>>> SSH key authentication successful!'"; then
+              AUTH_SUCCESS=true
+            else
+              echo "::warning::SSH key authentication to $TARGET_HOST:$TARGET_PORT failed."
+            fi
+          fi
 
-            echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
-            scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
-
-            echo ">>> Transferring server to /root/propconnect-stack/server..."
-            scp -r server/* vps-target:/root/propconnect-stack/server/
-
-            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
-            ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
-
-          elif [ -n "$VPS_PASSWORD" ]; then
-            echo ">>> Configuring SSH password authentication..."
+          # 2. Fallback to Password Authentication with sshpass if key not set or failed
+          if [ "$AUTH_SUCCESS" = false ] && [ -n "$VPS_PASSWORD" ]; then
+            echo ">>> Attempting SSH password authentication..."
             sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
             export SSHPASS="$VPS_PASSWORD"
 
-            echo ">>> Testing SSH authentication with VPS..."
-            sshpass -e ssh -p "$TARGET_PORT" -o StrictHostKeyChecking=no "$TARGET_USER@$TARGET_HOST" "echo '>>> SSH authentication successful!'"
+            rm -f "$HOME/.ssh/deploy_key"
+            write_ssh_config "$TARGET_HOST" "$TARGET_PORT" "$TARGET_USER"
 
-            echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
-            sshpass -e scp -P "$TARGET_PORT" -o StrictHostKeyChecking=no -r dist/* "$TARGET_USER@$TARGET_HOST:/root/propconnect-stack/panel-dist/"
+            echo ">>> Testing SSH password authentication..."
+            if sshpass -e ssh -o ConnectTimeout=15 vps-target "echo '>>> SSH authentication successful via password!'"; then
+              AUTH_SUCCESS=true
+            else
+              echo "::warning::Password connection to $TARGET_HOST failed."
+            fi
+          fi
 
-            echo ">>> Transferring server to /root/propconnect-stack/server..."
-            sshpass -e scp -P "$TARGET_PORT" -o StrictHostKeyChecking=no -r server/* "$TARGET_USER@$TARGET_HOST:/root/propconnect-stack/server/"
-
-            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
-            sshpass -e ssh -p "$TARGET_PORT" -o StrictHostKeyChecking=no "$TARGET_USER@$TARGET_HOST" "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
-
-          else
-            echo "::error::No SSH credentials configured! Please add VPS_SSH_KEY or VPS_SSH_PASSWORD in GitHub Repository Settings -> Secrets and variables -> Actions."
-            echo "Refer to repository README.md for the step-by-step secret setup guide."
+          if [ "$AUTH_SUCCESS" = false ]; then
+            echo "::error::SSH authentication to VPS failed. Please verify VPS_HOST, VPS_SSH_KEY or VPS_SSH_PASSWORD in GitHub Secrets."
             exit 1
+          fi
+
+          echo ">>> Transferring panel-dist to /root/propconnect-stack/panel-dist..."
+          if [ -f "$HOME/.ssh/deploy_key" ]; then
+            scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
+            echo ">>> Transferring server to /root/propconnect-stack/server..."
+            scp -r server/* vps-target:/root/propconnect-stack/server/
+            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
+            ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
+          else
+            sshpass -e scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
+            echo ">>> Transferring server to /root/propconnect-stack/server..."
+            sshpass -e scp -r server/* vps-target:/root/propconnect-stack/server/
+            echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
+            sshpass -e ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
           fi
 
           echo ">>> SUCCESS: PropKart Panel deployed to https://panel.nbpropertytech.com!"

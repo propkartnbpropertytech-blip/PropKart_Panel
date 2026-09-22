@@ -183,21 +183,7 @@ export async function submitRegistrationForm({ versionId, fields, media = [], ip
         throw error;
     }
 
-    // 4. Duplicate mobile check
-    const phoneVal = fields.mobile_number || fields.owner_phone || fields.phone || fields.contact;
-    if (phoneVal) {
-        const isDuplicate = await repo.isPhoneAlreadyRegistered(phoneVal);
-        if (isDuplicate) {
-            const error = new Error("This mobile number is already registered in our system. Duplicate submissions are not allowed.");
-            error.name = "ValidationError";
-            error.fields = {
-                mobile_number: "This mobile number is already registered in our system. Duplicate submissions are not allowed.",
-            };
-            throw error;
-        }
-    }
-
-    // 5. Insert submission record
+    // 4. Insert submission record (Owners can register multiple properties under the same phone number)
     const submission = await repo.createSubmissionRecord({
         versionId: actualVersionId,
         formId: version.form_id,
