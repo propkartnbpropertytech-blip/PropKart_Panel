@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Home,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useRealtime } from '../context/RealtimeContext';
@@ -37,6 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'listings', label: 'Listing', icon: Home },
     { id: 'submissions', label: 'Property Pool', icon: Layers },
     { id: 'form_builder', label: 'Form Builder', icon: Sliders },
     { id: 'audit_logs', label: 'Audit Trail', icon: History },

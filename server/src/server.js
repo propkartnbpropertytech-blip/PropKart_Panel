@@ -29,8 +29,14 @@ app.use((req, res, next) => {
 const allowedOrigins = [
     "https://propconnect.nbpropertytech.com",
     "https://panel.nbpropertytech.com",
+    "https://listing.nbpropertytech.com",
+    "https://presales.nbpropertytech.com",
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
+    "http://localhost:3004",
+    "http://localhost:3005",
     "http://localhost:5173",
     "http://localhost:5050",
 ];

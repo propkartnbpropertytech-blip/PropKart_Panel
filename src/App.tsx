@@ -9,6 +9,7 @@ import { SubmissionsList } from './pages/SubmissionsList';
 import { SubmissionDetail } from './pages/SubmissionDetail';
 import { FormBuilder } from './pages/FormBuilder';
 import { AuditLogs } from './pages/AuditLogs';
+import { ListingsPage } from './pages/ListingsPage';
 import { Loader2 } from 'lucide-react';
 
 const PanelContent: React.FC = () => {
@@ -52,6 +53,8 @@ const PanelContent: React.FC = () => {
     switch (currentTab) {
       case 'dashboard':
         return { title: 'Property Pool Dashboard', subtitle: 'Real-time property inflow, verification and pool metrics' };
+      case 'listings':
+        return { title: 'PropKart Inventory & Listings', subtitle: 'Live synchronized software inventory • Rent, Re-sale & Pre-sales showcase' };
       case 'submissions':
         return { title: 'Live Property Pool', subtitle: 'Verified property registrations directly in database' };
       case 'form_builder':
@@ -98,6 +101,8 @@ const PanelContent: React.FC = () => {
               onNavigateSubmissions={() => setCurrentTab('submissions')}
               onSelectSubmission={handleSelectSubmission}
             />
+          ) : currentTab === 'listings' ? (
+            <ListingsPage />
           ) : currentTab === 'submissions' ? (
             <SubmissionsList onSelectSubmission={handleSelectSubmission} />
           ) : currentTab === 'form_builder' ? (

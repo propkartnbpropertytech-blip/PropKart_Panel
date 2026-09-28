@@ -376,6 +376,13 @@ export async function createSubmissionRecord({
         },
     });
 
+    // Automatically sync submission into listings approval queue in Panel
+    try {
+        syncSubmissionToListing(submission, fields, media);
+    } catch (err) {
+        console.error("Failed to auto-sync submission into listings:", err);
+    }
+
     return submission;
 }
 
@@ -1549,5 +1556,561 @@ export async function getActiveUsers() {
         mobile: u.mobile,
         role: u.roles?.name || "Admin",
     }));
+}
+
+// ==========================================
+// LISTINGS & PRE-SALES INVENTORY REPOSITORY
+// Persistent JSON store with Supabase sync
+// ==========================================
+
+const DATA_DIR = path.join(process.cwd(), "src", "data");
+const LISTINGS_FILE = path.join(DATA_DIR, "listings_store.json");
+const PRESALES_SCHEMA_FILE = path.join(DATA_DIR, "presales_schema.json");
+const SETTINGS_FILE = path.join(DATA_DIR, "settings.json");
+
+function ensureDataDir() {
+    try {
+        if (!fs.existsSync(DATA_DIR)) {
+            fs.mkdirSync(DATA_DIR, { recursive: true });
+        }
+    } catch (e) {}
+}
+
+const DEFAULT_INVENTORY = [];
+
+function readListingsFile() {
+    ensureDataDir();
+    try {
+        if (fs.existsSync(LISTINGS_FILE)) {
+            const raw = fs.readFileSync(LISTINGS_FILE, "utf-8");
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                // Filter out any legacy dummy records to ensure 100% clean real inventory
+                const cleaned = parsed.filter((p) =>
+                    !p.id.startsWith("prop-rent-res-01") &&
+                    !p.id.startsWith("prop-rent-res-02") &&
+                    !p.id.startsWith("prop-presale-01") &&
+                    !p.id.startsWith("prop-sale-res-01") &&
+                    !p.id.startsWith("prop-rent-comm-") &&
+                    !p.id.startsWith("prop-sale-comm-") &&
+                    !p.id.startsWith("prop-rent-ind-") &&
+                    !p.id.startsWith("prop-sale-ind-") &&
+                    !p.id.startsWith("prop-plot-")
+                );
+                if (cleaned.length !== parsed.length) {
+                    writeListingsFile(cleaned);
+                }
+                return cleaned;
+            }
+        }
+    } catch (e) {}
+    writeListingsFile([]);
+    return [];
+}
+
+function writeListingsFile(data) {
+    ensureDataDir();
+    try {
+        fs.writeFileSync(LISTINGS_FILE, JSON.stringify(data, null, 2), "utf-8");
+    } catch (e) {
+        console.error("Failed to write listings store file:", e);
+    }
+}
+
+/**
+ * Maps a PropConnect property submission into the Listings store under Pending Approval
+ */
+export function syncSubmissionToListing(submission, fields = {}, media = []) {
+    try {
+        const list = readListingsFile();
+        const subId = submission.id;
+        const existingIdx = list.findIndex(
+            (p) => p.submission_id === subId || p.id === `prop-sub-${subId}`
+        );
+
+        let ownerName = decryptString(submission.owner_name) || fields.owner_name || fields.name || "Property Owner";
+        let ownerPhone = decryptString(submission.owner_phone) || fields.owner_phone || fields.mobile || fields.phone || "";
+        let ownerEmail = decryptString(submission.owner_email) || fields.owner_email || fields.email || "";
+        let address = decryptString(submission.address) || fields.address || fields.society_name || "";
+        let locationUrl = decryptString(submission.location_url) || decryptString(submission.direction_url) || fields.location_url || fields.direction_url || "";
+
+        // Determine transaction type: Rent vs Re-sale
+        const rawType = (submission.listing_type || fields.listing_type || fields.rent_or_sale || fields.purpose || "").toLowerCase();
+        const listingType = rawType.includes("rent") ? "Rent" : "Re-sale";
+
+        // Determine property category
+        let category = "Residential";
+        const rawCat = (submission.property_type || fields.property_type || fields.category || "").toLowerCase();
+        if (rawCat.includes("comm") || rawCat.includes("office") || rawCat.includes("shop") || rawCat.includes("showroom")) {
+            category = "Commercial";
+        } else if (rawCat.includes("indus") || rawCat.includes("shed") || rawCat.includes("ware") || rawCat.includes("factory")) {
+            category = "Industrial";
+        } else if (rawCat.includes("plot") || rawCat.includes("land") || rawCat.includes("agriculture")) {
+            category = "Land & Plot";
+        }
+
+        // Price formatting
+        const rawPrice = Number(fields.expected_price || fields.expected_rent || fields.rent || fields.price) || 0;
+        let priceDisplay = `₹ ${rawPrice.toLocaleString("en-IN")}`;
+        if (listingType === "Rent") {
+            priceDisplay = `₹ ${rawPrice.toLocaleString("en-IN")} / month`;
+        } else if (rawPrice >= 10000000) {
+            priceDisplay = `₹ ${(rawPrice / 10000000).toFixed(2)} Cr`;
+        } else if (rawPrice >= 100000) {
+            priceDisplay = `₹ ${(rawPrice / 100000).toFixed(2)} Lakhs`;
+        }
+
+        const area = Number(fields.built_up_area || fields.super_built_up_area || fields.plot_area || fields.area) || 1200;
+        const bhk = fields.bhk || fields.configuration || (category === "Residential" ? "3 BHK" : "Commercial Unit");
+
+        // Photos
+        let imageList = [];
+        if (Array.isArray(media) && media.length > 0) {
+            imageList = media.map((m) => m.public_url || m.storage_path).filter(Boolean);
+        }
+        if (imageList.length === 0) {
+            imageList = ["https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80"];
+        }
+
+        const title = fields.title || `${bhk} ${category} in ${submission.area || submission.city || "Ahmedabad"}`;
+        const description = fields.description || address || `Verified ${listingType} property submitted via PropConnect.`;
+
+        const listingItem = {
+            id: `prop-sub-${subId}`,
+            submission_id: subId,
+            registration_code: submission.registration_code,
+            source: listingType === "Rent" ? "propconnect_rent" : "propconnect_resale",
+            title,
+            description,
+            listing_type: listingType,
+            property_category: category,
+            property_sub_type: submission.property_type || "Apartment",
+            price: rawPrice,
+            price_display: priceDisplay,
+            price_unit: listingType === "Rent" ? "month" : "total",
+            area,
+            bhk,
+            address,
+            locality: submission.area || "Prime Locality",
+            city: submission.city || "Ahmedabad",
+            location_url: locationUrl,
+            images: imageList,
+            owner_name: ownerName,
+            owner_phone: ownerPhone,
+            owner_email: ownerEmail,
+            approval_status: existingIdx !== -1 ? (list[existingIdx].approval_status || "Pending") : "Pending",
+            is_approved: existingIdx !== -1 ? !!list[existingIdx].is_approved : false,
+            is_published: existingIdx !== -1 ? !!list[existingIdx].is_published : false,
+            amenities: ["Verified Submission", "Direct Owner"],
+            created_at: submission.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        };
+
+        if (existingIdx !== -1) {
+            list[existingIdx] = {
+                ...list[existingIdx],
+                ...listingItem,
+                is_approved: list[existingIdx].is_approved,
+                is_published: list[existingIdx].is_published,
+                approval_status: list[existingIdx].approval_status || "Pending",
+            };
+        } else {
+            list.unshift(listingItem);
+        }
+
+        writeListingsFile(list);
+        return listingItem;
+    } catch (e) {
+        console.error("Failed to sync submission to listings store:", e);
+    }
+}
+
+/**
+ * Scan all database submissions and ensure they are populated in listings store
+ */
+export async function syncAllSubmissionsToListings() {
+    try {
+        const { data: subs } = await supabase
+            .from("form_submissions")
+            .select("*, media:submission_media(*)");
+        if (Array.isArray(subs) && subs.length > 0) {
+            for (const sub of subs) {
+                const rawFields = decryptJson(sub.raw_data) || {};
+                syncSubmissionToListing(sub, rawFields, sub.media || []);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to batch sync submissions to listings:", e);
+    }
+}
+
+export async function getAssistancePhone() {
+    ensureDataDir();
+    try {
+        if (fs.existsSync(SETTINGS_FILE)) {
+            const raw = fs.readFileSync(SETTINGS_FILE, "utf-8");
+            const parsed = JSON.parse(raw);
+            if (parsed.assistance_phone) return parsed.assistance_phone;
+        }
+    } catch (e) {}
+
+    try {
+        const { data } = await supabase
+            .from("forms")
+            .select("assistance_phone")
+            .eq("slug", "property-registration")
+            .single();
+        if (data?.assistance_phone) {
+            saveSettingsFile({ assistance_phone: data.assistance_phone });
+            return data.assistance_phone;
+        }
+    } catch (e) {}
+
+    return "+91 99742 09999";
+}
+
+function saveSettingsFile(settings) {
+    ensureDataDir();
+    try {
+        let current = {};
+        if (fs.existsSync(SETTINGS_FILE)) {
+            current = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8"));
+        }
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify({ ...current, ...settings }, null, 2), "utf-8");
+    } catch (e) {}
+}
+
+export async function getPreSalesFormSchema() {
+    ensureDataDir();
+    try {
+        if (fs.existsSync(PRESALES_SCHEMA_FILE)) {
+            const raw = fs.readFileSync(PRESALES_SCHEMA_FILE, "utf-8");
+            return JSON.parse(raw);
+        }
+    } catch (e) {}
+
+    try {
+        const { data: form } = await supabase
+            .from("forms")
+            .select("*, form_sections(*, form_fields(*))")
+            .eq("slug", "presales-form")
+            .single();
+
+        if (form && form.form_sections?.[0]?.form_fields) {
+            const mapped = form.form_sections[0].form_fields.map((f) => ({
+                id: f.id,
+                field_key: f.field_key,
+                label: f.label,
+                field_type: f.field_type,
+                is_required: f.is_required,
+                options: f.options,
+                placeholder: f.placeholder,
+            }));
+            try {
+                fs.writeFileSync(PRESALES_SCHEMA_FILE, JSON.stringify(mapped, null, 2), "utf-8");
+            } catch (e) {}
+            return mapped;
+        }
+    } catch (e) {}
+
+    return null;
+}
+
+export async function savePreSalesFormSchema(fields, userId) {
+    ensureDataDir();
+    try {
+        fs.writeFileSync(PRESALES_SCHEMA_FILE, JSON.stringify(fields, null, 2), "utf-8");
+    } catch (e) {}
+    return { success: true, count: fields.length };
+}
+
+export async function getAllListings(query = {}) {
+    const list = readListingsFile();
+    return list;
+}
+
+/**
+ * Approve a property listing in Panel
+ */
+export async function approveListing(id, isPublished = true, userId = null) {
+    const list = readListingsFile();
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx === -1) {
+        const err = new Error("Property listing not found.");
+        err.statusCode = 404;
+        throw err;
+    }
+
+    list[idx].approval_status = "Approved";
+    list[idx].is_approved = true;
+    list[idx].is_published = isPublished !== undefined ? !!isPublished : true;
+    list[idx].approved_at = new Date().toISOString();
+    list[idx].approved_by = userId || "Operations Admin";
+    list[idx].updated_at = new Date().toISOString();
+
+    writeListingsFile(list);
+
+    // If linked to form_submissions, sync status
+    if (list[idx].submission_id) {
+        try {
+            await supabase
+                .from("form_submissions")
+                .update({ status: "Approved" })
+                .eq("id", list[idx].submission_id);
+        } catch (e) {}
+    }
+
+    return list[idx];
+}
+
+/**
+ * Reject a property listing in Panel
+ */
+export async function rejectListing(id, reason = "", userId = null) {
+    const list = readListingsFile();
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx === -1) {
+        const err = new Error("Property listing not found.");
+        err.statusCode = 404;
+        throw err;
+    }
+
+    list[idx].approval_status = "Rejected";
+    list[idx].is_approved = false;
+    list[idx].is_published = false;
+    list[idx].rejection_reason = reason || "Does not meet listing standards";
+    list[idx].updated_at = new Date().toISOString();
+
+    writeListingsFile(list);
+
+    // If linked to form_submissions, sync status
+    if (list[idx].submission_id) {
+        try {
+            await supabase
+                .from("form_submissions")
+                .update({ status: "Rejected" })
+                .eq("id", list[idx].submission_id);
+        } catch (e) {}
+    }
+
+    return list[idx];
+}
+
+/**
+ * Toggle web showcase visibility for approved properties
+ */
+export async function toggleListingStatus(id, isPublished) {
+    const list = readListingsFile();
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx === -1) {
+        const err = new Error("Property not found.");
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Only approved properties can be toggled ON
+    if (isPublished && !list[idx].is_approved) {
+        const err = new Error("Cannot show on web: Property must be approved by Operations Desk first.");
+        err.statusCode = 400;
+        throw err;
+    }
+
+    list[idx].is_published = isPublished;
+    list[idx].updated_at = new Date().toISOString();
+    writeListingsFile(list);
+
+    return list[idx];
+}
+
+/**
+ * Add Pre-sales property (From Pre-sales portal or Panel)
+ * Default status: Pending (requires panel approval unless explicitly approved)
+ */
+export async function createPreSalesProperty(payload, userId) {
+    const list = readListingsFile();
+
+    const rawPrice = Number(payload.price) || 0;
+    let priceDisplay = `₹ ${rawPrice.toLocaleString("en-IN")}`;
+    if (rawPrice >= 10000000) {
+        priceDisplay = `₹ ${(rawPrice / 10000000).toFixed(2)} Cr onwards`;
+    } else if (rawPrice >= 100000) {
+        priceDisplay = `₹ ${(rawPrice / 100000).toFixed(2)} Lakhs onwards`;
+    }
+
+    let imageList = [];
+    if (typeof payload.photos === "string" && payload.photos.trim()) {
+        imageList = payload.photos.split(",").map((u) => u.trim()).filter(Boolean);
+    } else if (Array.isArray(payload.photos)) {
+        imageList = payload.photos;
+    } else if (Array.isArray(payload.images)) {
+        imageList = payload.images;
+    }
+    if (imageList.length === 0) {
+        imageList = ["https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1000&q=80"];
+    }
+
+    let videoList = [];
+    if (typeof payload.videos === "string" && payload.videos.trim()) {
+        videoList = payload.videos.split(",").map((u) => u.trim()).filter(Boolean);
+    } else if (Array.isArray(payload.videos)) {
+        videoList = payload.videos;
+    }
+
+    // Default: Pending Approval and NOT published
+    const isApproved = payload.is_approved === true;
+    const isPublished = isApproved && payload.is_published === true;
+    const approvalStatus = isApproved ? "Approved" : "Pending";
+
+    const newProp = {
+        id: payload.id || `prop-presale-${Date.now()}`,
+        source: "presales_form",
+        registration_code: payload.registration_code || `PRE-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+        title: payload.title || payload.project_name || "Upcoming Pre-sales Project",
+        description: payload.description || "Exclusive verified pre-sales project.",
+        listing_type: "Pre-sales",
+        property_category: payload.property_category || "Residential",
+        property_sub_type: payload.property_sub_type || "High-Rise Apartments",
+        price: rawPrice,
+        price_display: priceDisplay,
+        price_unit: "total",
+        area: Number(payload.area) || 1800,
+        bhk: payload.bhk || "3 BHK",
+        developer: payload.developer || "PropKart Verified Partner",
+        possession_date: payload.possession_date || "Launching Soon",
+        rera_number: payload.rera_number || "RERA Applied / Approved",
+        address: payload.address || payload.locality || "Prime Locality",
+        locality: payload.locality || "Ahmedabad",
+        city: payload.city || "Ahmedabad",
+        location_url: payload.location_url || "",
+        images: imageList,
+        videos: videoList,
+        contact_person: payload.contact_person || "",
+        contact_phone: payload.contact_phone || "",
+        approval_status: approvalStatus,
+        is_approved: isApproved,
+        is_published: isPublished,
+        amenities: typeof payload.amenities_text === "string"
+            ? payload.amenities_text.split(",").map((s) => s.trim()).filter(Boolean)
+            : (Array.isArray(payload.amenities) ? payload.amenities : ["RERA Approved", "Clubhouse"]),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+    };
+
+    list.unshift(newProp);
+    writeListingsFile(list);
+
+    return newProp;
+}
+
+export async function getListingById(id) {
+    const list = readListingsFile();
+    const item = list.find((p) => p.id === id);
+    if (!item) {
+        const err = new Error(`Listing with id "${id}" not found.`);
+        err.statusCode = 404;
+        throw err;
+    }
+    return item;
+}
+
+export async function updateListingById(id, patchData = {}) {
+    const list = readListingsFile();
+    const idx = list.findIndex((p) => p.id === id);
+    if (idx === -1) {
+        const err = new Error(`Listing with id "${id}" not found.`);
+        err.statusCode = 404;
+        throw err;
+    }
+
+    // Process price formatting if price changed
+    let priceDisplay = patchData.price_display || list[idx].price_display;
+    if (patchData.price !== undefined) {
+        const rawPrice = Number(patchData.price) || 0;
+        if (rawPrice >= 10000000) {
+            priceDisplay = `₹ ${(rawPrice / 10000000).toFixed(2)} Cr onwards`;
+        } else if (rawPrice >= 100000) {
+            priceDisplay = `₹ ${(rawPrice / 100000).toFixed(2)} Lakhs onwards`;
+        } else {
+            priceDisplay = `₹ ${rawPrice.toLocaleString("en-IN")}`;
+        }
+    }
+
+    // Process images
+    let images = list[idx].images;
+    if (patchData.images !== undefined) {
+        images = Array.isArray(patchData.images)
+            ? patchData.images
+            : typeof patchData.images === "string"
+            ? patchData.images.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+    } else if (patchData.photos !== undefined) {
+        images = Array.isArray(patchData.photos)
+            ? patchData.photos
+            : typeof patchData.photos === "string"
+            ? patchData.photos.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+    }
+
+    // Process videos
+    let videos = list[idx].videos || [];
+    if (patchData.videos !== undefined) {
+        videos = Array.isArray(patchData.videos)
+            ? patchData.videos
+            : typeof patchData.videos === "string"
+            ? patchData.videos.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+    }
+
+    // Process amenities
+    let amenities = list[idx].amenities;
+    if (patchData.amenities !== undefined) {
+        amenities = Array.isArray(patchData.amenities)
+            ? patchData.amenities
+            : typeof patchData.amenities === "string"
+            ? patchData.amenities.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+    } else if (patchData.amenities_text !== undefined) {
+        amenities = typeof patchData.amenities_text === "string"
+            ? patchData.amenities_text.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
+    }
+
+    const updated = {
+        ...list[idx],
+        ...patchData,
+        images: images && images.length > 0 ? images : list[idx].images,
+        videos,
+        amenities,
+        price_display: priceDisplay,
+        updated_at: new Date().toISOString(),
+    };
+
+    list[idx] = updated;
+    writeListingsFile(list);
+
+    return updated;
+}
+
+export async function deleteListingById(id) {
+    const list = readListingsFile();
+    const item = list.find((p) => p.id === id);
+    if (!item) {
+        // Return gracefully even if already deleted
+        return { id, deleted: true, message: "Property already removed." };
+    }
+    const filtered = list.filter((p) => p.id !== id);
+    writeListingsFile(filtered);
+
+    // If it was linked to a submission, archive in Supabase so sync won't restore it
+    if (item.submission_id) {
+        try {
+            await supabase
+                .from("form_submissions")
+                .update({ status: "Archived" })
+                .eq("id", item.submission_id);
+        } catch (e) {}
+    }
+
+    return { id, title: item.title, deleted: true };
 }
 

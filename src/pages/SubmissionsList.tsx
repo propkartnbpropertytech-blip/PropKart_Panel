@@ -12,6 +12,11 @@ import {
 import { useRealtime } from '../context/RealtimeContext';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import {
+  getSubmissionListingInfo,
+  toggleSubmissionListing,
+  bulkPublishSubmissionsToListing,
+} from '../services/listingsService';
+import {
   Search,
   ArrowUpDown,
   Phone,
@@ -36,6 +41,7 @@ import {
   ChevronDown,
   Tag,
   SlidersHorizontal,
+  Globe,
 } from 'lucide-react';
 
 interface SubmissionsListProps {
@@ -122,6 +128,34 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
   // Row-level Individual Export States
   const [rowExportOpenId, setRowExportOpenId] = useState<string | null>(null);
   const [rowExportingId, setRowExportingId] = useState<string | null>(null);
+
+  // Listing Showcase Sync States
+  const [loadingListingId, setLoadingListingId] = useState<string | null>(null);
+  const [isBulkPublishing, setIsBulkPublishing] = useState<boolean>(false);
+  const [listingRefreshTrigger, setListingRefreshTrigger] = useState<number>(0);
+
+  // Cross-tab and local real-time listener for listing inventory changes
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('propkart_listing_channel');
+      channel.onmessage = () => {
+        setListingRefreshTrigger((prev) => prev + 1);
+      };
+    } catch (e) {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'propkart_panel_listings_inventory') {
+        setListingRefreshTrigger((prev) => prev + 1);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   // Toast Feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -462,6 +496,45 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
       showToast(err.message || 'Failed to update status');
     } finally {
       setIsBulkUpdatingStatus(false);
+    }
+  };
+
+  // Show on Listing Handlers
+  const handleToggleShowOnListing = async (sub: Submission, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setLoadingListingId(sub.id);
+    try {
+      const res = await toggleSubmissionListing(sub);
+      const isNowLive = res.is_published;
+      showToast(
+        isNowLive
+          ? `Property ${sub.registration_code} published live to Listing showcase (${res.listing_type})!`
+          : `Property ${sub.registration_code} removed from Listing showcase.`
+      );
+      setListingRefreshTrigger((prev) => prev + 1);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update listing showcase status');
+    } finally {
+      setLoadingListingId(null);
+    }
+  };
+
+  const handleBulkShowOnListing = async (shouldPublish = true) => {
+    if (selectedIds.length === 0) return;
+    setIsBulkPublishing(true);
+    try {
+      const selectedSubs = submissions.filter((s) => selectedIds.includes(s.id));
+      const res = await bulkPublishSubmissionsToListing(selectedSubs, shouldPublish);
+      showToast(
+        shouldPublish
+          ? `Published ${res.length} selected properties to Listing showcase!`
+          : `Removed ${res.length} selected properties from Listing showcase.`
+      );
+      setListingRefreshTrigger((prev) => prev + 1);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update listing status for selected properties');
+    } finally {
+      setIsBulkPublishing(false);
     }
   };
 
@@ -910,6 +983,22 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
               )}
             </div>
 
+            {/* Bulk Show on Listing Button */}
+            <button
+              type="button"
+              disabled={isBulkPublishing}
+              onClick={() => handleBulkShowOnListing(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1d1d1f] hover:bg-black text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+              title="Publish all selected properties to Listing showcase (Rent / Re-sale)"
+            >
+              {isBulkPublishing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+              ) : (
+                <Globe className="w-3.5 h-3.5 text-emerald-400" />
+              )}
+              <span>Show on Listing ({selectedIds.length})</span>
+            </button>
+
             {/* Bulk Delete Button */}
             <button
               type="button"
@@ -961,6 +1050,7 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                   <th className="py-3.5 px-3">Location</th>
                   <th className="py-3.5 px-3">Pool Status</th>
                   <th className="py-3.5 px-3 text-center">Media</th>
+                  <th className="py-3.5 px-3 text-center">Show on Listing</th>
                   <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -1087,6 +1177,46 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                             <span className="text-slate-400">—</span>
                           )}
                         </div>
+                      </td>
+                      <td className="py-3.5 px-3 text-center whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const info = getSubmissionListingInfo(sub.id, sub.registration_code);
+                          const isBusy = loadingListingId === sub.id;
+                          if (info.isListed && info.isPublished) {
+                            return (
+                              <button
+                                type="button"
+                                disabled={isBusy}
+                                onClick={(e) => handleToggleShowOnListing(sub, e)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold text-[11px] shadow-xs transition-all cursor-pointer group/btn"
+                                title="Currently live on public Listing showcase. Click to unpublish."
+                              >
+                                {isBusy ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-600" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 group-hover/btn:scale-110 transition-transform" />
+                                )}
+                                <span>Live on Listing</span>
+                              </button>
+                            );
+                          }
+                          return (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={(e) => handleToggleShowOnListing(sub, e)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#1d1d1f] hover:bg-black text-white font-medium text-[11px] shadow-xs hover:shadow transition-all cursor-pointer group/btn"
+                              title="Publish this property to public Listing showcase (Rent / Re-sale)"
+                            >
+                              {isBusy ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                              ) : (
+                                <Globe className="w-3.5 h-3.5 text-emerald-400 group-hover/btn:rotate-12 transition-transform" />
+                              )}
+                              <span>Show on Listing</span>
+                            </button>
+                          );
+                        })()}
                       </td>
                       <td className="py-3.5 px-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
@@ -1316,6 +1446,36 @@ export const SubmissionsList: React.FC<SubmissionsListProps> = ({ onSelectSubmis
                     </div>
 
                     <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      {(() => {
+                        const info = getSubmissionListingInfo(sub.id, sub.registration_code);
+                        const isBusy = loadingListingId === sub.id;
+                        if (info.isListed && info.isPublished) {
+                          return (
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={(e) => handleToggleShowOnListing(sub, e)}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 font-semibold text-[10px] cursor-pointer"
+                              title="Live on Listing (Click to unpublish)"
+                            >
+                              {isBusy ? <Loader2 className="w-3 h-3 animate-spin text-emerald-600" /> : <CheckCircle2 className="w-3 h-3 text-emerald-600" />}
+                              <span>Live</span>
+                            </button>
+                          );
+                        }
+                        return (
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={(e) => handleToggleShowOnListing(sub, e)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#1d1d1f] hover:bg-black text-white font-medium text-[10px] cursor-pointer"
+                            title="Show on Listing"
+                          >
+                            {isBusy ? <Loader2 className="w-3 h-3 animate-spin text-white" /> : <Globe className="w-3 h-3 text-emerald-400" />}
+                            <span>Show on Listing</span>
+                          </button>
+                        );
+                      })()}
                       {sub.owner_phone && (
                         <button
                           onClick={() => setWhatsAppTarget(sub)}

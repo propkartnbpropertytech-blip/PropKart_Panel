@@ -544,3 +544,190 @@ export async function listActiveUsers(req, res, next) {
         next(err);
     }
 }
+
+// ==========================================
+// LISTINGS & PRE-SALES CONTROLLER METHODS
+// ==========================================
+
+export async function getListings(req, res, next) {
+    try {
+        const listings = await repo.getAllListings(req.query);
+        return res.status(200).json({
+            success: true,
+            data: listings,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function getPublicListings(req, res, next) {
+    try {
+        const listings = await repo.getAllListings(req.query);
+        // Strictly return only properties that are APPROVED and PUBLISHED
+        const publishedOnly = (listings || []).filter(
+            (p) => p.is_approved === true && p.is_published === true
+        );
+        const phone = await repo.getAssistancePhone();
+        return res.status(200).json({
+            success: true,
+            count: publishedOnly.length,
+            data: publishedOnly,
+            assistance_phone: phone,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function getAssistancePhone(req, res, next) {
+    try {
+        const phone = await repo.getAssistancePhone();
+        return res.status(200).json({
+            success: true,
+            assistance_phone: phone,
+            data: { assistance_phone: phone },
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function toggleListingVisibility(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { is_published } = req.body;
+        const result = await repo.toggleListingStatus(id, is_published);
+        return res.status(200).json({
+            success: true,
+            message: "Listing status toggled successfully.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function approveListing(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { is_published } = req.body;
+        const result = await repo.approveListing(id, is_published, req.user?.id);
+        return res.status(200).json({
+            success: true,
+            message: "Property approved successfully.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function rejectListing(req, res, next) {
+    try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        const result = await repo.rejectListing(id, reason, req.user?.id);
+        return res.status(200).json({
+            success: true,
+            message: "Property rejected.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function syncSubmissions(req, res, next) {
+    try {
+        await repo.syncAllSubmissionsToListings();
+        const listings = await repo.getAllListings();
+        return res.status(200).json({
+            success: true,
+            message: "All database submissions synced to listings.",
+            data: listings,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function createPreSalesListing(req, res, next) {
+    try {
+        const result = await repo.createPreSalesProperty(req.body, req.user?.id);
+        return res.status(201).json({
+            success: true,
+            message: "Pre-sales property created in inventory.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function getListingById(req, res, next) {
+    try {
+        const { id } = req.params;
+        const result = await repo.getListingById(id);
+        return res.status(200).json({
+            success: true,
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function updateListing(req, res, next) {
+    try {
+        const { id } = req.params;
+        const result = await repo.updateListingById(id, req.body);
+        return res.status(200).json({
+            success: true,
+            message: "Listing updated successfully.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function deleteListing(req, res, next) {
+    try {
+        const { id } = req.params;
+        const result = await repo.deleteListingById(id);
+        return res.status(200).json({
+            success: true,
+            message: "Property deleted from inventory.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function getPreSalesSchema(req, res, next) {
+    try {
+        const schema = await repo.getPreSalesFormSchema();
+        return res.status(200).json({
+            success: true,
+            data: { fields: schema },
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+export async function savePreSalesSchema(req, res, next) {
+    try {
+        const { fields } = req.body;
+        const result = await repo.savePreSalesFormSchema(fields, req.user?.id);
+        return res.status(200).json({
+            success: true,
+            message: "Pre-sales form schema updated successfully.",
+            data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}

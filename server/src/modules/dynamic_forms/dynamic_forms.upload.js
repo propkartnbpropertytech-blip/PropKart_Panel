@@ -24,7 +24,7 @@ export const uploadMiddleware = multer({
     storage,
     limits: {
         fileSize: 60 * 1024 * 1024, // 60MB max file size (videos up to 50MB, safety buffer)
-        files: 50, // max 50 files per single upload batch
+        files: 100, // max 100 files per single upload batch (supports 100 photos, 50 videos)
     },
     fileFilter: (req, file, cb) => {
         if (ALLOWED_MIME_TYPES.has(file.mimetype)) {

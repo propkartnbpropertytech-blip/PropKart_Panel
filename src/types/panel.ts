@@ -194,3 +194,73 @@ export interface User {
   full_name: string;
   role: 'Super Admin' | 'Admin' | 'Telecaller' | 'Sales';
 }
+
+// ==========================================
+// LISTINGS & INVENTORY TYPES (PropKart Sync)
+// ==========================================
+
+export type ListingType = 'Rent' | 'Re-sale' | 'Pre-sales';
+export type ListingCategory = 'Residential' | 'Commercial' | 'Industrial' | 'Land & Plot';
+export type ApprovalStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface ListingProperty {
+  id: string;
+  source?: 'presales_form' | 'propconnect_rent' | 'propconnect_resale' | 'panel_manual';
+  submission_id?: string;
+  registration_code?: string;
+  title: string;
+  description?: string;
+  listing_type: ListingType;
+  property_category: ListingCategory;
+  property_sub_type?: string;
+  price: number;
+  price_display?: string;
+  price_unit?: 'month' | 'total' | 'sqft';
+  area: number; // in sq.ft
+  bhk?: string;
+  floor_number?: number | null;
+  total_floors?: number | null;
+  address?: string;
+  locality?: string;
+  city: string;
+  location_url?: string;
+  images: string[];
+  videos?: string[];
+  is_published: boolean; // Toggle switch: Live on Showcase vs Hidden
+  approval_status?: ApprovalStatus; // 'Pending' | 'Approved' | 'Rejected'
+  is_approved?: boolean;
+  approved_at?: string | null;
+  approved_by?: string | null;
+  rejection_reason?: string | null;
+  developer?: string; // Pre-sales specific
+  possession_date?: string; // Pre-sales specific
+  rera_number?: string; // Pre-sales specific
+  owner_name?: string; // Rent/Resale specific
+  owner_phone?: string; // Rent/Resale specific
+  owner_email?: string;
+  contact_person?: string;
+  contact_phone?: string;
+  amenities?: string[];
+  raw_data?: Record<string, any>;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PreSalesField {
+  id?: string;
+  field_key: string;
+  label: string;
+  field_type: 'text' | 'number' | 'dropdown' | 'textarea' | 'date' | 'photos' | 'videos' | 'url' | 'google_location';
+  is_required: boolean;
+  options?: { label: string; value: string }[] | string;
+  placeholder?: string;
+  help_text?: string;
+}
+
+export interface PreSalesFormSchema {
+  id: string;
+  title: string;
+  version: number;
+  fields: PreSalesField[];
+  updated_at: string;
+}

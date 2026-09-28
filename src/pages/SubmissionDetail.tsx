@@ -15,6 +15,10 @@ import { MediaGalleryViewer } from '../components/MediaGalleryViewer';
 import { WhatsAppModal } from '../components/WhatsAppModal';
 import { ShareModal } from '../components/ShareModal';
 import {
+  getSubmissionListingInfo,
+  toggleSubmissionListing,
+} from '../services/listingsService';
+import {
   ArrowLeft,
   Phone,
   Mail,
@@ -42,6 +46,7 @@ import {
   AlertTriangle,
   FileSpreadsheet,
   Archive,
+  Globe,
 } from 'lucide-react';
 
 interface SubmissionDetailProps {
@@ -92,6 +97,12 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
   const [isExportingCsv, setIsExportingCsv] = useState(false);
   const [isExportingZip, setIsExportingZip] = useState(false);
 
+  // Listing Showcase State
+  const [listingInfo, setListingInfo] = useState(() =>
+    getSubmissionListingInfo(submissionId)
+  );
+  const [isListingPublishing, setIsListingPublishing] = useState(false);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -113,6 +124,37 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
   useEffect(() => {
     loadDetail();
   }, [submissionId]);
+
+  useEffect(() => {
+    if (data?.submission) {
+      setListingInfo(getSubmissionListingInfo(data.submission.id, data.submission.registration_code));
+    }
+  }, [data]);
+
+  // Listen to cross-tab updates from listings channel
+  useEffect(() => {
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('propkart_listing_channel');
+      channel.onmessage = () => {
+        if (data?.submission) {
+          setListingInfo(getSubmissionListingInfo(data.submission.id, data.submission.registration_code));
+        }
+      };
+    } catch (e) {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'propkart_panel_listings_inventory' && data?.submission) {
+        setListingInfo(getSubmissionListingInfo(data.submission.id, data.submission.registration_code));
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [data]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -216,6 +258,25 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
     setIsShareModalOpen(true);
   };
 
+  const handleToggleShowOnListing = async () => {
+    if (!data?.submission) return;
+    setIsListingPublishing(true);
+    try {
+      const res = await toggleSubmissionListing(data.submission);
+      const updated = getSubmissionListingInfo(data.submission.id, data.submission.registration_code);
+      setListingInfo(updated);
+      showToast(
+        res.is_published
+          ? `Property ${data.submission.registration_code} published live to Listing showcase (${res.listing_type})!`
+          : `Property ${data.submission.registration_code} removed from Listing showcase.`
+      );
+    } catch (e: any) {
+      showToast(e.message || 'Failed to update listing showcase status');
+    } finally {
+      setIsListingPublishing(false);
+    }
+  };
+
   if (loading || !data) {
     return (
       <div className="p-16 flex flex-col items-center justify-center space-y-3 text-slate-400">
@@ -309,6 +370,34 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
           >
             <Share2 className="w-3.5 h-3.5" />
             <span>Share</span>
+          </button>
+
+          {/* Show on Listing / Live on Listing CTA */}
+          <button
+            type="button"
+            disabled={isListingPublishing}
+            onClick={handleToggleShowOnListing}
+            className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all cursor-pointer ${
+              listingInfo.isListed && listingInfo.isPublished
+                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300'
+                : 'bg-[#1d1d1f] hover:bg-black text-white'
+            }`}
+            title={
+              listingInfo.isListed && listingInfo.isPublished
+                ? 'Currently live on public Listing showcase (Click to unpublish)'
+                : 'Publish directly to public Listing showcase (Rent / Re-sale)'
+            }
+          >
+            {isListingPublishing ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : listingInfo.isListed && listingInfo.isPublished ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Globe className="w-3.5 h-3.5 text-emerald-400" />
+            )}
+            <span>
+              {listingInfo.isListed && listingInfo.isPublished ? 'Live on Listing' : 'Show on Listing'}
+            </span>
           </button>
 
           {/* Dual Export Dropdown */}
@@ -704,6 +793,74 @@ export const SubmissionDetail: React.FC<SubmissionDetailProps> = ({
 
         {/* Right 1 Column: Property Notes & Audit Trail */}
         <div className="space-y-6">
+          {/* Public Listing Showcase Card */}
+          <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Globe className="w-4 h-4 text-emerald-600" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1d1d1f]">
+                  Listing Showcase
+                </h3>
+              </div>
+              {listingInfo.isListed && listingInfo.isPublished ? (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Live on Listing
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                  Not in Showcase
+                </span>
+              )}
+            </div>
+
+            <p className="text-xs text-[#86868b] leading-relaxed">
+              {listingInfo.isListed && listingInfo.isPublished
+                ? `This property is live on the public PropKart Listing directory under the ${
+                    listingInfo.listing?.listing_type || 'Rent / Re-sale'
+                  } category.`
+                : 'Click below to push this property directly from the Property Pool to the public Listing directory.'}
+            </p>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isListingPublishing}
+                onClick={handleToggleShowOnListing}
+                className={`flex-1 py-2.5 px-4 rounded-full text-xs font-semibold shadow-apple-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  listingInfo.isListed && listingInfo.isPublished
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                    : 'bg-[#1d1d1f] hover:bg-black text-white'
+                }`}
+              >
+                {isListingPublishing ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : listingInfo.isListed && listingInfo.isPublished ? (
+                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                ) : (
+                  <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+                <span>
+                  {listingInfo.isListed && listingInfo.isPublished
+                    ? 'Remove from Listing Showcase'
+                    : 'Show on Listing Showcase'}
+                </span>
+              </button>
+
+              {listingInfo.isListed && listingInfo.isPublished && (
+                <a
+                  href="http://localhost:3004"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2.5 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] text-[#1d1d1f] border border-black/[0.06] transition-colors"
+                  title="Open Public Listing Site"
+                >
+                  <ExternalLink className="w-4 h-4 text-emerald-600" />
+                </a>
+              )}
+            </div>
+          </div>
+
           {/* Property Team Notes */}
           <div className="bg-white border border-black/[0.06] rounded-3xl p-5 sm:p-6 shadow-apple-sm space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#1d1d1f] flex items-center gap-2">

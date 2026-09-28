@@ -31,3 +31,19 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.28);
 }
+
+/* Explicit reset for clean borderless search input */
+.borderless-search-input {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+}
+.borderless-search-input:focus {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}

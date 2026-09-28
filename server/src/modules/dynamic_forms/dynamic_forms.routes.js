@@ -24,10 +24,15 @@ const router = Router();
 // Get published active form schema
 router.get("/forms/active", controller.getActiveForm);
 
-// Upload photos & videos (up to 50 photos, up to 30 videos per submission)
+// Upload photos & videos (up to 100 photos, up to 50 videos per submission)
 router.post(
     "/form-submissions/upload-media",
-    uploadMiddleware.array("files", 50),
+    uploadMiddleware.array("files", 100),
+    controller.uploadSubmissionMedia
+);
+router.post(
+    "/listings/upload-media",
+    uploadMiddleware.array("files", 100),
     controller.uploadSubmissionMedia
 );
 
@@ -156,5 +161,38 @@ router.post(
     validate(createFormVersionSchema),
     controller.createNewDraftVersion
 );
+
+// ==========================================
+// LISTINGS & PRE-SALES INVENTORY ROUTES
+// ==========================================
+router.get("/listings/public", controller.getPublicListings);
+router.get("/listings/all", controller.getListings);
+router.get("/listings/:id", controller.getListingById);
+router.put("/listings/:id", controller.updateListing);
+router.patch("/listings/:id", controller.updateListing);
+router.delete("/listings/:id", controller.deleteListing);
+router.patch("/listings/:id/toggle", controller.toggleListingVisibility);
+router.patch("/listings/:id/approve", controller.approveListing);
+router.patch("/listings/:id/reject", controller.rejectListing);
+router.post("/listings/presales", controller.createPreSalesListing);
+router.post("/listings/sync-submissions", controller.syncSubmissions);
+router.get("/forms/presales-schema", controller.getPreSalesSchema);
+router.put("/forms/presales-schema", controller.savePreSalesSchema);
+router.get("/forms/assistance-phone", controller.getAssistancePhone);
+router.patch("/forms/assistance-phone", controller.updateAssistancePhone);
+
+// Admin protected routes
+router.get("/admin/listings", authenticate, panelRoles, controller.getListings);
+router.get("/admin/listings/:id", authenticate, panelRoles, controller.getListingById);
+router.put("/admin/listings/:id", authenticate, panelRoles, controller.updateListing);
+router.patch("/admin/listings/:id", authenticate, panelRoles, controller.updateListing);
+router.delete("/admin/listings/:id", authenticate, panelRoles, controller.deleteListing);
+router.patch("/admin/listings/:id/toggle", authenticate, panelRoles, controller.toggleListingVisibility);
+router.patch("/admin/listings/:id/approve", authenticate, panelRoles, controller.approveListing);
+router.patch("/admin/listings/:id/reject", authenticate, panelRoles, controller.rejectListing);
+router.post("/admin/listings/presales", authenticate, panelRoles, controller.createPreSalesListing);
+router.post("/admin/listings/sync-submissions", authenticate, panelRoles, controller.syncSubmissions);
+router.get("/admin/forms/presales-schema", authenticate, panelRoles, controller.getPreSalesSchema);
+router.put("/admin/forms/presales-schema", authenticate, requireRole("Super Admin", "Admin"), controller.savePreSalesSchema);
 
 export default router;
