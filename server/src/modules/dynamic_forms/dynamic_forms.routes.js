@@ -195,4 +195,10 @@ router.post("/admin/listings/sync-submissions", authenticate, panelRoles, contro
 router.get("/admin/forms/presales-schema", authenticate, panelRoles, controller.getPreSalesSchema);
 router.put("/admin/forms/presales-schema", authenticate, requireRole("Super Admin", "Admin"), controller.savePreSalesSchema);
 
+// PropKart External API Integration Gateway
+router.get("/integrations/propkart/status", controller.getPropKartStatus);
+router.post("/integrations/propkart/sync", controller.syncPropKartInventory);
+router.get("/admin/integrations/propkart/status", controller.getPropKartStatus);
+router.post("/admin/integrations/propkart/sync", controller.syncPropKartInventory);
+
 export default router;

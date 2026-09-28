@@ -1,6 +1,10 @@
 import * as service from "./dynamic_forms.service.js";
 import * as repo from "./dynamic_forms.repository.js";
 import { uploadFileToStorage } from "./dynamic_forms.upload.js";
+import {
+    syncPropKartLiveInventory,
+    getPropKartIntegrationStatus,
+} from "../integrations/propkart_inventory.service.js";
 
 // ==========================================
 // PUBLIC CONTROLLERS (PropKart Connect)
@@ -726,6 +730,41 @@ export async function savePreSalesSchema(req, res, next) {
             success: true,
             message: "Pre-sales form schema updated successfully.",
             data: result,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * GET /api/v1/integrations/propkart/status
+ * Get live status of the PropKart External API Integration
+ */
+export async function getPropKartStatus(req, res, next) {
+    try {
+        const status = getPropKartIntegrationStatus();
+        return res.status(200).json({
+            success: true,
+            data: status,
+        });
+    } catch (err) {
+        next(err);
+    }
+}
+
+/**
+ * POST /api/v1/integrations/propkart/sync
+ * Manually trigger synchronization with the live PropKart API
+ */
+export async function syncPropKartInventory(req, res, next) {
+    try {
+        const result = await syncPropKartLiveInventory();
+        const allListings = await repo.getAllListings();
+        return res.status(200).json({
+            success: true,
+            message: result.message,
+            data: result,
+            listings: allListings,
         });
     } catch (err) {
         next(err);

@@ -446,6 +446,90 @@ export async function syncDatabaseSubmissions(): Promise<ListingProperty[]> {
   return fetchListings();
 }
 
+export interface PropKartIntegrationStatus {
+  isConfigured: boolean;
+  lastSyncTime: string | null;
+  totalSynced: number;
+  rentCount: number;
+  resaleCount: number;
+  lastError: string | null;
+  apiUrl: string;
+  maskedKey: string;
+  currentTime?: string;
+}
+
+/**
+ * Fetch PropKart Live Gateway Status
+ */
+export async function fetchPropKartIntegrationStatus(): Promise<PropKartIntegrationStatus | null> {
+  const endpoints = [
+    `${BASE_URL}/integrations/propkart/status`,
+    `${BASE_URL}/admin/integrations/propkart/status`,
+    'http://localhost:5050/api/v1/integrations/propkart/status',
+  ];
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('propkart_panel_token') || ''}`,
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) return json.data;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+/**
+ * Trigger Live Synchronization with PropKart API (Hostinger VPS)
+ */
+export async function syncPropKartExternalInventory(): Promise<{
+  properties: ListingProperty[];
+  syncResult: any;
+}> {
+  const endpoints = [
+    `${BASE_URL}/integrations/propkart/sync`,
+    `${BASE_URL}/admin/integrations/propkart/sync`,
+    'http://localhost:5050/api/v1/integrations/propkart/sync',
+  ];
+
+  let syncResult: any = null;
+
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('propkart_panel_token') || ''}`,
+        },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        syncResult = json.data;
+        if (Array.isArray(json.listings)) {
+          saveLocalListings(json.listings);
+          try {
+            const channel = new BroadcastChannel('propkart_listing_channel');
+            channel.postMessage({ type: 'INVENTORY_SYNCED', count: json.listings.length });
+            channel.close();
+          } catch (e) {}
+          return { properties: json.listings, syncResult };
+        }
+      }
+    } catch (e) {}
+  }
+
+  const properties = await fetchListings();
+  return { properties, syncResult };
+}
+
 /**
  * Add Pre-sales property from Panel
  */

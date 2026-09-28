@@ -136,12 +136,14 @@ jobs:
             scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
             echo ">>> Transferring server to /root/propconnect-stack/server..."
             scp -r server/* vps-target:/root/propconnect-stack/server/
+            [ -f docker-compose.prod.yml ] && scp docker-compose.prod.yml vps-target:/root/propconnect-stack/docker-compose.prod.yml
             echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
             ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
           else
             sshpass -e scp -r dist/* vps-target:/root/propconnect-stack/panel-dist/
             echo ">>> Transferring server to /root/propconnect-stack/server..."
             sshpass -e scp -r server/* vps-target:/root/propconnect-stack/server/
+            [ -f docker-compose.prod.yml ] && sshpass -e scp docker-compose.prod.yml vps-target:/root/propconnect-stack/docker-compose.prod.yml
             echo ">>> Rebuilding API and restarting panel container (Strict Zero-Touch)..."
             sshpass -e ssh vps-target "cd /root/propconnect-stack && docker compose -f docker-compose.prod.yml up -d --build propconnect-api && docker restart propconnect-panel && docker ps --filter 'name=propconnect-' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' && curl -sI -k https://panel.nbpropertytech.com | head -n 5"
           fi

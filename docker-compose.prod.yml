@@ -1,0 +1,207 @@
+# ==============================================================================
+# PropKart Connect & Panel Production Stack (Strict Zero-Touch Isolation)
+# Dedicated Database, Backend API, and Frontends
+# 
+# Form URL:  https://propconnect.nbpropertytech.com
+# Panel URL: https://panel.nbpropertytech.com
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. DEDICATED ISOLATED DATABASE (PostgreSQL 15)
+  # Completely separate from the main PropKart database.
+  # ----------------------------------------------------------------------------
+  propconnect-postgres:
+    container_name: propconnect-postgres
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: propconnect
+      POSTGRES_USER: propconnect_user
+      POSTGRES_PASSWORD: PropConnectSecureDB2026!
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+      - propconnect-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U propconnect_user -d propconnect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - propconnect-network
+
+  # ----------------------------------------------------------------------------
+  # 2. DEDICATED POSTGREST REST LAYER
+  # ----------------------------------------------------------------------------
+  propconnect-postgrest:
+    container_name: propconnect-postgrest
+    image: postgrest/postgrest:latest
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://propconnect_user:PropConnectSecureDB2026!@propconnect-postgres:5432/propconnect
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: anon
+      PGRST_JWT_SECRET: super-secret-jwt-token-with-at-least-32-characters-long
+    depends_on:
+      propconnect-postgres:
+        condition: service_healthy
+    networks:
+      - propconnect-network
+
+  # ----------------------------------------------------------------------------
+  # 3. DEDICATED SUPABASE REST COMPATIBILITY PROXY
+  # ----------------------------------------------------------------------------
+  propconnect-proxy:
+    container_name: propconnect-proxy
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./proxy-nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - propconnect-postgrest
+    networks:
+      - propconnect-network
+
+  # ----------------------------------------------------------------------------
+  # 4. DEDICATED BACKEND API (Node.js 22 Standalone Dynamic Forms Engine)
+  # ----------------------------------------------------------------------------
+  propconnect-api:
+    container_name: propconnect-api
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 5050
+      NODE_ENV: production
+      SUPABASE_URL: http://propconnect-proxy:8000
+      SUPABASE_SERVICE_ROLE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3ODY2OTk1OTIsImV4cCI6Mjk0NDM3OTU5Mn0.IF5oOpg-C4yulvAck_5U6L_xZ8IK1aP07EKVQYFnoZw
+      SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzg2Njk5NTkyLCJleHAiOjI5NDQzNzk1OTJ9.wh_-5DLwKYInlRUM0ObjpFU1BjATrWEEcOK-nrG5ncY
+      JWT_SECRET: propconnect-forms-standalone-secret-key-2026
+      APP_URL: https://panel.nbpropertytech.com
+      CONNECT_URL: https://propconnect.nbpropertytech.com
+      PROPKART_API_URL: https://propkart.nbpropertytech.com/api/external/propkart
+      PROPKART_API_KEY: PK_LIVE_0ecb0c97b5da3f589c081699195471ebcc1d38c6d04441fb2db9b9efc3ea8686
+    volumes:
+      - propconnect-uploads:/app/public/uploads
+      - propconnect-data:/app/src/data
+    depends_on:
+      - propconnect-proxy
+    networks:
+      - propconnect-network
+
+  # ----------------------------------------------------------------------------
+  # 5. PUBLIC FORM APPLICATION (propconnect.nbpropertytech.com)
+  # ----------------------------------------------------------------------------
+  propconnect-web:
+    container_name: propconnect-web
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx-connect.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./connect-dist:/usr/share/nginx/html:ro
+    depends_on:
+      - propconnect-api
+    networks:
+      - propconnect-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.propconnect-live.rule=Host(`propconnect.nbpropertytech.com`)"
+      - "traefik.http.routers.propconnect-live.entrypoints=websecure"
+      - "traefik.http.routers.propconnect-live.tls=true"
+      - "traefik.http.routers.propconnect-live.tls.certresolver=letsencrypt"
+      - "traefik.http.services.propconnect-live.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # 6. OPERATIONS PANEL APPLICATION (panel.nbpropertytech.com)
+  # ----------------------------------------------------------------------------
+  propconnect-panel:
+    container_name: propconnect-panel
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx-panel.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./panel-dist:/usr/share/nginx/html:ro
+    depends_on:
+      - propconnect-api
+    networks:
+      - propconnect-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.propconnect-panel-live.rule=Host(`panel.nbpropertytech.com`)"
+      - "traefik.http.routers.propconnect-panel-live.entrypoints=websecure"
+      - "traefik.http.routers.propconnect-panel-live.tls=true"
+      - "traefik.http.routers.propconnect-panel-live.tls.certresolver=letsencrypt"
+      - "traefik.http.services.propconnect-panel-live.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # 7. DEDICATED VISUAL DATABASE VIEWER (pgweb)
+  # Visual Web UI for propconnect-postgres
+  # Accessible securely via SSH Tunnel: ssh -L 8085:127.0.0.1:8085 root@200.234.36.120
+  # ----------------------------------------------------------------------------
+  propconnect-db-viewer:
+    container_name: propconnect-db-viewer
+    image: sosedoff/pgweb:latest
+    restart: unless-stopped
+    environment:
+      PGWEB_DATABASE_URL: postgres://propconnect_user:PropConnectSecureDB2026!@propconnect-postgres:5432/propconnect?sslmode=disable
+    ports:
+      - "127.0.0.1:8085:8081"
+    depends_on:
+      propconnect-postgres:
+        condition: service_healthy
+    networks:
+      - propconnect-network
+
+  # ----------------------------------------------------------------------------
+  # 8. PUBLIC LISTINGS SHOWCASE (listing.nbpropertytech.com)
+  # ----------------------------------------------------------------------------
+  propkart-listing:
+    container_name: propkart-listing
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx-listing.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./listing-dist:/usr/share/nginx/html:ro
+    networks:
+      - propconnect-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.propkart-listing-live.rule=Host(`listing.nbpropertytech.com`)"
+      - "traefik.http.routers.propkart-listing-live.entrypoints=websecure"
+      - "traefik.http.routers.propkart-listing-live.tls=true"
+      - "traefik.http.routers.propkart-listing-live.tls.certresolver=letsencrypt"
+      - "traefik.http.services.propkart-listing-live.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # 9. PRE-SALES INTAKE PORTAL (presales.nbpropertytech.com / pre-sales.nblisting.com)
+  # ----------------------------------------------------------------------------
+  propkart-presales:
+    container_name: propkart-presales
+    image: nginx:alpine
+    restart: unless-stopped
+    volumes:
+      - ./nginx-presales.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./presales-dist:/usr/share/nginx/html:ro
+    networks:
+      - propconnect-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.propkart-presales-live.rule=Host(`presales.nbpropertytech.com`) || Host(`pre-sales.nblisting.com`)"
+      - "traefik.http.routers.propkart-presales-live.entrypoints=websecure"
+      - "traefik.http.routers.propkart-presales-live.tls=true"
+      - "traefik.http.routers.propkart-presales-live.tls.certresolver=letsencrypt"
+      - "traefik.http.services.propkart-presales-live.loadbalancer.server.port=80"
+
+volumes:
+  propconnect-pgdata:
+    name: propconnect-pgdata
+  propconnect-uploads:
+    name: propconnect-uploads
+  propconnect-data:
+    name: propconnect-data
+
+networks:
+  propconnect-network:
+    name: propconnect-network
+    driver: bridge

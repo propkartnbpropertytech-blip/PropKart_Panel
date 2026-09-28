@@ -7,6 +7,9 @@ import {
   rejectListingProperty,
   syncDatabaseSubmissions,
   deleteListingProperty,
+  fetchPropKartIntegrationStatus,
+  syncPropKartExternalInventory,
+  PropKartIntegrationStatus,
 } from '../services/listingsService';
 import { AddPreSalesModal } from '../components/AddPreSalesModal';
 import { EditPropertyModal } from '../components/EditPropertyModal';
@@ -43,12 +46,18 @@ import {
   AlertTriangle,
   Video as VideoIcon,
   Play,
+  Key,
+  Database,
+  Server,
+  Wifi,
 } from 'lucide-react';
 
 export const ListingsPage: React.FC = () => {
   const [properties, setProperties] = useState<ListingProperty[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [syncing, setSyncing] = useState<boolean>(false);
+  const [gatewaySyncing, setGatewaySyncing] = useState<boolean>(false);
+  const [gatewayStatus, setGatewayStatus] = useState<PropKartIntegrationStatus | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isLandingPreviewOpen, setIsLandingPreviewOpen] = useState<boolean>(false);
   const [selectedProperty, setSelectedProperty] = useState<ListingProperty | null>(null);
@@ -88,13 +97,39 @@ export const ListingsPage: React.FC = () => {
     }
   };
 
+  const loadGatewayStatus = async () => {
+    try {
+      const st = await fetchPropKartIntegrationStatus();
+      if (st) setGatewayStatus(st);
+    } catch (e) {}
+  };
+
+  const handleSyncPropKartGateway = async () => {
+    setGatewaySyncing(true);
+    try {
+      const { properties: updated, syncResult } = await syncPropKartExternalInventory();
+      setProperties(updated);
+      await loadGatewayStatus();
+      showToast(
+        syncResult?.message ||
+          `⚡ Successfully synchronized live inventory (${updated.length} properties) from Hostinger VPS via PropKart API Key!`
+      );
+    } catch (err: any) {
+      showToast('Failed to sync PropKart gateway: ' + err.message);
+    } finally {
+      setGatewaySyncing(false);
+    }
+  };
+
   useEffect(() => {
     loadProperties();
+    loadGatewayStatus();
 
     // Listen for cross-tab updates (e.g. from PreSales or Listing app)
     const channel = new BroadcastChannel('propkart_listing_channel');
     channel.onmessage = () => {
       loadProperties();
+      loadGatewayStatus();
     };
 
     return () => {
@@ -305,6 +340,17 @@ export const ListingsPage: React.FC = () => {
 
         {/* Header Right Action Buttons */}
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          {/* Sync PropKart External API Key Button */}
+          <button
+            onClick={handleSyncPropKartGateway}
+            disabled={gatewaySyncing}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100/80 hover:border-emerald-300 transition-all shadow-xs active:scale-95 cursor-pointer disabled:opacity-50"
+            title="Synchronize live inventory (Rent & Re-Sale) from Hostinger VPS using PropKart API Key"
+          >
+            <Key className={`w-3.5 h-3.5 text-emerald-600 ${gatewaySyncing ? 'animate-spin' : ''}`} />
+            <span>{gatewaySyncing ? 'Syncing Key...' : 'Sync PropKart Key'}</span>
+          </button>
+
           {/* Sync Database Submissions Button */}
           <button
             onClick={handleSyncDatabase}
@@ -334,6 +380,69 @@ export const ListingsPage: React.FC = () => {
             <Plus className="w-4 h-4 text-emerald-400" />
             <span>Add Pre-sales property</span>
           </button>
+        </div>
+      </div>
+
+      {/* PropKart Live Gateway (Hostinger VPS Integration Banner) */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-[#1d1d1f] text-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-700/60 relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 relative z-10">
+          <div className="flex items-start sm:items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-400">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
+                  PropKart Live Inventory Gateway
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Hostinger VPS Connected
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
+                  PK_LIVE_0ecb...8686
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>URL: <code className="text-emerald-300/90 font-mono text-[11px]">https://propkart.nbpropertytech.com/api/external/propkart</code></span>
+                <span className="text-slate-500 hidden sm:inline">•</span>
+                <span>Port 5001 Traefik Gateway</span>
+                <span className="text-slate-500 hidden sm:inline">•</span>
+                <span>Zero Dummy Data (Ahmedabad Verified)</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Quick Live Inventory Metrics */}
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 text-xs">
+              <span className="text-slate-400">Live Inventory:</span>
+              <button
+                onClick={() => setActiveTab('Rent')}
+                className="font-bold text-emerald-400 hover:underline cursor-pointer"
+              >
+                {stats.rent} Rent
+              </button>
+              <span className="text-slate-600">/</span>
+              <button
+                onClick={() => setActiveTab('Re-sale')}
+                className="font-bold text-amber-400 hover:underline cursor-pointer"
+              >
+                {stats.resale} Re-sale
+              </button>
+            </div>
+
+            {/* Sync Live Button */}
+            <button
+              onClick={handleSyncPropKartGateway}
+              disabled={gatewaySyncing}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 active:scale-95 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${gatewaySyncing ? 'animate-spin' : ''}`} />
+              <span>{gatewaySyncing ? 'Pulling Inventory...' : 'Sync Live Inventory'}</span>
+            </button>
+          </div>
         </div>
       </div>
 

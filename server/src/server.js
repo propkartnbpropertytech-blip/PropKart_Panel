@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import path from "path";
 import dynamicFormsRouter from "./modules/dynamic_forms/dynamic_forms.routes.js";
 import authRouter from "./modules/auth/auth.routes.js";
+import { syncPropKartLiveInventory } from "./modules/integrations/propkart_inventory.service.js";
 
 dotenv.config();
 
@@ -125,4 +126,14 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 PropKart Standalone Forms API running on http://0.0.0.0:${PORT}`);
+
+    // Auto-sync live inventory from Hostinger VPS on startup
+    syncPropKartLiveInventory()
+        .then((res) => console.log(`[Startup Sync] ${res.message}`))
+        .catch((err) => console.warn(`[Startup Sync] Initial inventory sync warning: ${err.message}`));
+
+    // Periodic synchronization every 30 minutes
+    setInterval(() => {
+        syncPropKartLiveInventory().catch((err) => console.warn(`[Periodic Sync] Warning: ${err.message}`));
+    }, 30 * 60 * 1000);
 });
