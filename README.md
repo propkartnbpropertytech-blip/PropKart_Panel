@@ -63,6 +63,12 @@
 - **2. Instant WhatsApp Cards:** Formats key property highlights (dimensions, configuration, pricing, verified features) into ready-to-send WhatsApp messages.
 - **3. Multi-Page PDF Dossier:** Client-side vector PDF generation that compiles high-resolution property photos, verified specifications, and company branding into a formal presentation dossier.
 
+### 🌐 Public Listings & Pre-Sales Operations Desk
+- **Show on Listing Toggle (Rent & Re-Sale):** Directly from the Property Pool (`/submissions`), operators can publish verified rental or resale submissions directly to the customer-facing portal (`https://listing.nbpropertytech.com`) with a single click.
+- **Pre-Sales Intake & Management:** Specialized modal and manager (`/listings`) to publish new residential/commercial developments with RERA ID, developer branding, configurations (BHKs), amenities, pricing, brochure URLs, and floor plans.
+- **Unified Public API:** Serves validated public property inventory via `/api/v1/listings/public` without exposing private owner contacts or unverified draft properties.
+- **Dynamic Assistance Desk:** Syncs live telecaller hotline to public portals via `/api/v1/forms/assistance-phone`.
+
 ---
 
 ## 🔐 Security & Architecture
